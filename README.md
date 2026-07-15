@@ -69,7 +69,3 @@ npx expo start
 * **Data Standards Simulated:** W3C Verifiable Credentials Data Model v2.0 (JSON-LD / JWT payloads)
 * **Authentication Standard:** WebAuthn / Passkeys (Device-bound biometrics)
 * **Exchange Protocols:** OpenID for Verifiable Credential Issuance (OpenID4VCI) & Presentations (OpenID4VP)
-
-```
-
-```
