@@ -39,7 +39,7 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
     if (step === 'create') {
       setStep('confirm');
     } else if (pin === confirmPin) {
-      go('identity_auth');
+      go('identity_proofing');
     } else {
       setError(true);
     }
@@ -53,7 +53,7 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
     <View style={themeStyles.screen}>
       <StatusChrome />
       <TextInput style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="numeric" autoFocus />
-      <Header eyebrow="Step 1 of 3" title="Create Account" />
+      <Header eyebrow="Step 1 of 4" title="Create Account" />
       <ScrollView contentContainerStyle={styles.detailContent}>
         <View style={styles.welcomeCopy}>
           <Text style={styles.welcomeTitle}>{title}</Text>
