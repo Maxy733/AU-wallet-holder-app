@@ -4,6 +4,7 @@ import {
   StatusBar,
   View,
   Text,
+  useWindowDimensions,
 } from "react-native";
 import {
   NavigationContainer,
@@ -26,7 +27,6 @@ import { IdentityProofingScreen } from "../screens/IdentityProofingScreen";
 import { VerifyingScreen } from "../screens/VerifyingScreen";
 import WalletScreen from "../screens/WalletScreen";
 import { OfferScreen } from "../screens/OfferScreen";
-import LoginScreen from "../screens/LoginScreen";
 import { SuccessScreen } from "../screens/SuccessScreen";
 import { CredentialScreen } from "../screens/CredentialScreen";
 import { ShareScreen } from "../screens/ShareScreen";
@@ -41,8 +41,6 @@ export type RootStackParamList = {
   identity_auth: undefined;
   create_pin: undefined;
   identity_proofing: undefined;
-  issue: undefined;
-  login: undefined;
   verifying: undefined;
   wallet: undefined;
   offer: undefined;
@@ -66,10 +64,14 @@ type ScreenFrameProps = {
 
 function ScreenFrame({ children, activeScreen }: ScreenFrameProps) {
   const navigation = useNavigation<AppNavigation>();
+  const { width, height } = useWindowDimensions();
+
+  const phoneWidth = Math.min(375, Math.max(320, width - 32));
+  const phoneHeight = Math.min(760, Math.max(640, height - 32));
 
   const go = useCallback(
     (screen: Screen) => {
-      navigation.navigate(screen as keyof RootStackParamList);
+      navigation.navigate(screen);
     },
     [navigation],
   );
@@ -90,12 +92,14 @@ function ScreenFrame({ children, activeScreen }: ScreenFrameProps) {
         style={[
           styles.phone,
           {
-            flex: 1,
-            width: "100%",
+            width: phoneWidth,
+            height: phoneHeight,
           },
         ]}
       >
-        {children}
+        <View style={{ flex: 1 }}>
+          {children}
+        </View>
 
         {activeScreen && <BottomNav active={activeScreen} go={go} />}
       </View>
@@ -115,7 +119,7 @@ type VerifyingWrapperProps = VerifyingRouteProps & {
 function VerifyingWrapper({ navigation, setHistory }: VerifyingWrapperProps) {
   const go = useCallback(
     (screen: Screen) => {
-      navigation.navigate(screen as keyof RootStackParamList);
+      navigation.navigate(screen);
     },
     [navigation],
   );
@@ -207,31 +211,7 @@ export default function RootStack() {
             <ScreenFrame>
               <IdentityProofingScreen
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
-                }
-              />
-            </ScreenFrame>
-          )}
-        </Stack.Screen>
-
-        <Stack.Screen name="issue">
-          {({ navigation }) => (
-            <ScreenFrame>
-              <OfferScreen
-                go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
-                }
-              />
-            </ScreenFrame>
-          )}
-        </Stack.Screen>
-
-        <Stack.Screen name="login">
-          {({ navigation }) => (
-            <ScreenFrame>
-              <LoginScreen
-                go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
               />
             </ScreenFrame>
@@ -255,7 +235,7 @@ export default function RootStack() {
             <ScreenFrame>
               <OfferScreen
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
               />
             </ScreenFrame>
@@ -267,7 +247,7 @@ export default function RootStack() {
             <ScreenFrame>
               <SuccessScreen
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
               />
             </ScreenFrame>
@@ -279,7 +259,7 @@ export default function RootStack() {
             <ScreenFrame>
               <CredentialScreen
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
               />
             </ScreenFrame>
@@ -293,7 +273,7 @@ export default function RootStack() {
                 fields={shareFields}
                 setFields={setShareFields}
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
                 onShare={() => {
                   const sharedCount =
@@ -329,7 +309,7 @@ export default function RootStack() {
             <ScreenFrame>
               <VerificationScreen
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
               />
             </ScreenFrame>
@@ -341,7 +321,7 @@ export default function RootStack() {
             <ScreenFrame>
               <ReceiptScreen
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
               />
             </ScreenFrame>
@@ -354,7 +334,7 @@ export default function RootStack() {
               <HistoryScreen
                 history={history}
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
               />
             </ScreenFrame>
@@ -366,7 +346,7 @@ export default function RootStack() {
             <ScreenFrame activeScreen="settings">
               <SettingsScreen
                 go={(screen) =>
-                  navigation.navigate(screen as keyof RootStackParamList)
+                  navigation.navigate(screen)
                 }
               />
             </ScreenFrame>

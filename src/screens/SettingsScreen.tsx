@@ -2,7 +2,6 @@ import React from 'react';
 import { View, ScrollView, Text, StyleSheet, Pressable } from 'react-native';
 import { StatusChrome } from '../components/StatusChrome';
 import { Header, SectionLabel, SettingRow } from '../components';
-import { BottomNav } from '../components/BottomNav';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
@@ -31,7 +30,6 @@ export function SettingsScreen({ go }: { go: (screen: Screen) => void }) {
           <Text style={styles.logoutText}>Log Out</Text>
         </Pressable>
       </ScrollView>
-      <BottomNav active="settings" go={go} />
     </View>
   );
 }

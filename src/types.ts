@@ -3,8 +3,6 @@ export type Screen =
   | 'identity_auth' // NEW: Enter student ID & university email
   | 'create_pin' // NEW: Setup 6-digit passcode
   | 'identity_proofing' // NEW: Input Passport, National ID, Grad Date
-  | 'issue' // NEW: Issue credential flow
-  | 'login' // NEW: Authenticate after issue
   | 'verifying' // NEW: Loading spinner status panel
   | 'wallet'
   | 'offer'

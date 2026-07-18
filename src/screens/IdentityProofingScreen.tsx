@@ -14,7 +14,7 @@ export function IdentityProofingScreen({ go }: { go: (screen: Screen) => void })
   return (
     <View style={themeStyles.screen}>
       <StatusChrome />
-      <BackHeader title="Personal Details" subtitle="Step 2 of 4" onBack={() => go('create_pin')} />
+      <BackHeader title="Personal Details" subtitle="Step 2 of 3" onBack={() => go('create_pin')} />
       <ScrollView contentContainerStyle={styles.detailContent}>
         <View style={[styles.infoPanel, { gap: 8 }]}>
           <Text style={styles.switchLabel}>Full Name (as per Passport)</Text>
@@ -45,7 +45,7 @@ export function IdentityProofingScreen({ go }: { go: (screen: Screen) => void })
         </View>
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label="Submit to Registrar" onPress={() => go('issue')} />
+        <PrimaryButton label="Submit to Registrar" onPress={() => go('verifying')} />
       </View>
     </View>
   );

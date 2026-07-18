@@ -14,7 +14,7 @@ export default function LoginScreen({ go }: { go: (screen: Screen) => void }) {
   return (
     <View style={themeStyles.screen}>
       <StatusChrome />
-      <BackHeader title="Login" subtitle="Step 4 of 4" onBack={() => go('issue')} />
+      <BackHeader title="Login" subtitle="Step 4 of 4" onBack={() => go('wallet')} />
       <View style={styles.copy}>
         <Text style={styles.title}>Authenticate to finish setup</Text>
         <Text style={styles.body}>
