@@ -61,7 +61,7 @@ export default function App() {
             subtitle: 'From AU Registrar',
             targetScreen: 'credential',
           }]);
-          setScreen('wallet');
+          setScreen('success');
         }, 2500);
         return <VerifyingScreen go={setScreen} />;
       case 'wallet':

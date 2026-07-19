@@ -40,7 +40,7 @@ export function IdentityAuthScreen({ go }: { go: (screen: Screen) => void }) {
         />
       </View>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label="Next" onPress={() => go('identity_proofing')} />
+        <PrimaryButton label="Next" onPress={() => go('wallet')} />
       </View>
     </View>
   );

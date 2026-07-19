@@ -37,7 +37,8 @@ export function SuccessScreen({ go }: { go: (screen: Screen) => void }) {
       </View>
       <View style={styles.successActions}>
         <PrimaryButton label="▣  View Pass" onPress={() => go('credential')} />
-        <SecondaryButton label="Go to Home" onPress={() => go('wallet')} />
+        // Change the Secondary Button or Done text to point to login
+        <SecondaryButton label="Continue to Login" onPress={() => go('identity_auth')} />
       </View>
       <BottomNav active="wallet" go={go} />
     </View>

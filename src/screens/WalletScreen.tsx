@@ -40,7 +40,6 @@ export function WalletScreen({ go }: { go: (screen: Screen) => void }) {
           onPress={() => go('share')}
         />
       </ScrollView>
-      <BottomNav active="wallet" go={go} />
     </View>
   );
 }
