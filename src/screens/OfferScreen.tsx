@@ -28,7 +28,7 @@ export function OfferScreen({ go }: { go: (screen: Screen) => void }) {
         </InfoPanel>
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label="Approve & continue" onPress={() => go('success')} />
+        <PrimaryButton label="Approve & continue" onPress={() => go('verifying')} />
         <SecondaryButton label="Decline" onPress={() => go('wallet')} />
       </View>
     </View>

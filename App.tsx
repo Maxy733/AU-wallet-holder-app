@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +26,8 @@ import { BottomNav } from './src/components';
 // 3. The Core App Shell
 export default function App() {
   const [screen, setScreen] = useState<Screen>('create_pin');
+  const [hasCredential, setHasCredential] = useState(false);
+  const [verificationPurpose, setVerificationPurpose] = useState<'account' | 'credential'>('account');
   const [shareFields, setShareFields] = useState({
     degree: true,
     major: true,
@@ -34,6 +36,31 @@ export default function App() {
     standing: false,
   });
   const [history, setHistory] = useState<HistoryEvent[]>([]);
+
+  useEffect(() => {
+    if (screen !== 'verifying') {
+      return;
+    }
+
+    const verificationTimer = setTimeout(() => {
+      if (verificationPurpose === 'account') {
+        setScreen('welcome');
+        return;
+      }
+
+      setHasCredential(true);
+      setHistory([{
+        id: 'initial-issue',
+        type: 'issue',
+        title: 'Issued: Education Transcript VC',
+        subtitle: 'From AU Registrar',
+        targetScreen: 'credential',
+      }]);
+      setScreen('success');
+    }, 2500);
+
+    return () => clearTimeout(verificationTimer);
+  }, [screen, verificationPurpose]);
 
   const showNav = [
     'wallet',
@@ -51,26 +78,33 @@ export default function App() {
       case 'create_pin':
         return <CreatePinScreen go={setScreen} />;
       case 'identity_proofing':
-        return <IdentityProofingScreen go={setScreen} />;
+        return (
+          <IdentityProofingScreen
+            go={(nextScreen) => {
+              if (nextScreen === 'verifying') {
+                setVerificationPurpose('account');
+              }
+              setScreen(nextScreen);
+            }}
+          />
+        );
       case 'verifying':
-        // In a real app, this would be an async check. We simulate it.
-        setTimeout(() => {
-          setHistory([{
-            id: 'initial-issue',
-            type: 'issue',
-            title: 'Issued: Education Transcript VC',
-            subtitle: 'From AU Registrar',
-            targetScreen: 'credential',
-          }]);
-          setScreen('success');
-        }, 2500);
         return <VerifyingScreen go={setScreen} />;
       case 'wallet':
-        return <WalletScreen go={setScreen} />;
+        return <WalletScreen go={setScreen} hasCredential={hasCredential} />;
       case 'offer':
-        return <OfferScreen go={setScreen} />;
+        return (
+          <OfferScreen
+            go={(nextScreen) => {
+              if (nextScreen === 'verifying') {
+                setVerificationPurpose('credential');
+              }
+              setScreen(nextScreen);
+            }}
+          />
+        );
       case 'success':
-        return <WalletScreen go={setScreen} />;
+        return <WalletScreen go={setScreen} hasCredential={hasCredential} />;
       case 'credential':
         return <CredentialScreen go={setScreen} />;
       case 'share':
@@ -103,7 +137,7 @@ export default function App() {
       case 'settings':
         return <SettingsScreen go={setScreen} />;
     }
-  }, [screen, shareFields]);
+  }, [screen, shareFields, hasCredential, history, verificationPurpose]);
 
   return (
     <SafeAreaProvider>

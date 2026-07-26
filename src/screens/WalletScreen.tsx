@@ -1,34 +1,53 @@
 import React from 'react';
-import { View, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable, Text } from 'react-native';
 import { Header, SectionLabel } from '../components';
 import { CredentialCard } from '../components/CredentialCard';
 import { SummaryStats } from '../components/SummaryStats';
 import { Notice } from '../components/Notice';
-import { BottomNav } from '../components/BottomNav';
 import { colors } from '../theme/constants';
 import { copy } from '../theme/mockData';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
 
-export function WalletScreen({ go }: { go: (screen: Screen) => void }) {
+export function WalletScreen({
+  go,
+  hasCredential,
+}: {
+  go: (screen: Screen) => void;
+  hasCredential: boolean;
+}) {
   return (
     <View style={themeStyles.screen}>
       <Header eyebrow="GOOD AFTERNOON" title={copy.student} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.scrollBottom}>
         <SectionLabel>YOUR CREDENTIALS</SectionLabel>
-        <Pressable onPress={() => go('credential')}>
-          <CredentialCard />
-        </Pressable>
-        <SummaryStats />
+        {hasCredential ? (
+          <Pressable onPress={() => go('credential')}>
+            <CredentialCard />
+          </Pressable>
+        ) : (
+          <View>
+            <View style={themeStyles.emptyWallet}>
+              <Text style={themeStyles.emptyWalletTitle}>Your wallet is empty</Text>
+            </View>
+            <Text style={themeStyles.emptyWalletCopy}>
+              No credential yet - check back{`\n`}after AU Registrar issues one
+            </Text>
+            <View style={themeStyles.emptyWalletDivider} />
+          </View>
+        )}
+        <SummaryStats hasCredential={hasCredential} />
         <SectionLabel>PENDING</SectionLabel>
-        <Notice
-          icon="✉"
-          tint={colors.red}
-          bg={colors.softRed}
-          title="AU Registrar wants to issue a credential"
-          subtitle="Transportation VC · tap to review"
-          onPress={() => go('offer')}
-        />
+        {!hasCredential && (
+          <Notice
+            icon="✉"
+            tint={colors.red}
+            bg={colors.softRed}
+            title="AU Registrar wants to issue a credential"
+            subtitle="Education Transcript VC · tap to review"
+            onPress={() => go('offer')}
+          />
+        )}
         <Notice
           icon="◆"
           tint={colors.brown}
