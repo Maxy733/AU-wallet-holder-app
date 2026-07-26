@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView, Text } from 'react-native';
-import { InfoPanel } from '../components';
+import { BackHeader, InfoPanel, PrimaryButton, SecondaryButton } from '../components';
 import { copy } from '../theme/mockData';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
@@ -8,7 +8,7 @@ import { Screen } from '../types';
 export function OfferScreen({ go }: { go: (screen: Screen) => void }) {
   return (
     <View style={themeStyles.screen}>
-      {/* <BackHeader title="New credential offer" subtitle="From AU Registrar" onBack={() => go('wallet')} /> */}
+      <BackHeader title="New credential offer" subtitle="From AU Registrar" onBack={() => go('wallet')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
         <InfoPanel title="Education Transcript VC" rows={[['Issuer', 'AU Registrar'], ['Issuer DID', 'did:web:au.edu/issuer']]} />
         <InfoPanel
@@ -28,8 +28,8 @@ export function OfferScreen({ go }: { go: (screen: Screen) => void }) {
         </InfoPanel>
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        {/* <PrimaryButton label="Approve & continue" onPress={() => go('success')} /> */}
-        {/* <SecondaryButton label="Decline" onPress={() => go('wallet')} /> */}
+        <PrimaryButton label="Approve & continue" onPress={() => go('success')} />
+        <SecondaryButton label="Decline" onPress={() => go('wallet')} />
       </View>
     </View>
   );
