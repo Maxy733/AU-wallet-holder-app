@@ -112,42 +112,25 @@ type VerifyingRouteProps = NativeStackScreenProps<
   "verifying"
 >;
 
-type VerifyingWrapperProps = VerifyingRouteProps & {
-  setHistory: React.Dispatch<React.SetStateAction<HistoryEvent[]>>;
-};
-
-function VerifyingWrapper({ navigation, setHistory }: VerifyingWrapperProps) {
-  const go = useCallback(
-    (screen: Screen) => {
-      navigation.navigate(screen);
-    },
-    [navigation],
-  );
+function VerifyingWrapper({ navigation }: VerifyingRouteProps) {
+  const finishVerification = useCallback(() => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "welcome" }],
+    });
+  }, [navigation]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setHistory([
-        {
-          id: "initial-issue",
-          type: "issue",
-          title: "Issued: Education Transcript VC",
-          subtitle: "From AU Registrar",
-          targetScreen: "credential",
-        },
-      ]);
-
-      // Remove verifying from the navigation history.
-      navigation.replace("wallet");
-    }, 2500);
+    const timer = setTimeout(finishVerification, 2500);
 
     return () => {
       clearTimeout(timer);
     };
-  }, [navigation, setHistory]);
+  }, [finishVerification]);
 
   return (
     <ScreenFrame>
-      <VerifyingScreen go={go} />
+      <VerifyingScreen go={finishVerification} />
     </ScreenFrame>
   );
 }
@@ -166,7 +149,7 @@ export default function RootStack() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="welcome"
+        initialRouteName="create_pin"
         screenOptions={{
           headerShown: false,
           animation: "slide_from_right",
@@ -176,7 +159,7 @@ export default function RootStack() {
           {({ navigation }) => (
             <ScreenFrame>
               <WelcomeScreen
-                onSignIn={() => navigation.navigate("create_pin")}
+                onSignIn={() => navigation.replace("wallet")}
               />
             </ScreenFrame>
           )}
@@ -213,13 +196,16 @@ export default function RootStack() {
                 go={(screen) =>
                   navigation.navigate(screen)
                 }
+                onComplete={() =>
+                  navigation.replace("verifying")
+                }
               />
             </ScreenFrame>
           )}
         </Stack.Screen>
 
         <Stack.Screen name="verifying">
-          {(props) => <VerifyingWrapper {...props} setHistory={setHistory} />}
+          {(props) => <VerifyingWrapper {...props} />}
         </Stack.Screen>
 
         <Stack.Screen name="wallet">

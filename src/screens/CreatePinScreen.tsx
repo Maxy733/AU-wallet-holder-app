@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { Pressable, SafeAreaView, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
-import { Header, PrimaryButton } from '../components';
+import { PrimaryButton } from '../components';
 import { StatusChrome } from '../components/StatusChrome';
 import { Screen } from '../types';
 
@@ -12,7 +11,7 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState(false);
-  const [useBiometrics, setUseBiometrics] = useState(true);
+  const inputRef = useRef<TextInput>(null);
 
   const handlePinChange = (text: string) => {
     setError(false);
@@ -36,10 +35,14 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
 
   const handleNext = () => {
     setError(false);
+    if (currentPin.length !== 6) {
+      setError(true);
+      return;
+    }
     if (step === 'create') {
       setStep('confirm');
     } else if (pin === confirmPin) {
-      go('identity_proofing');
+      go('identity_auth');
     } else {
       setError(true);
     }
@@ -47,28 +50,32 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
 
   const currentPin = step === 'create' ? pin : confirmPin;
   const title = step === 'create' ? 'Create Wallet PIN' : 'Confirm Wallet PIN';
-  const subtitle = error ? 'PINs did not match. Try again.' : 'Set a local code to securely lock your credentials on this phone.';
+  const subtitle = error
+    ? currentPin.length !== 6
+      ? 'Enter all 6 digits to continue.'
+      : 'PINs did not match. Try again.'
+    : 'Set a local code to securely lock your credentials on this phone.';
 
   return (
     <View style={themeStyles.screen}>
       <StatusChrome />
-      <TextInput style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="numeric" autoFocus />
-      <Header eyebrow="Step 1 of 3" title="Create Account" />
+      <TextInput ref={inputRef} style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="number-pad" autoFocus />
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>STEP 1 OF 3</Text>
+        <Text style={styles.headerTitle}>Create account</Text>
+      </View>
       <ScrollView contentContainerStyle={styles.detailContent}>
         <View style={styles.welcomeCopy}>
           <Text style={styles.welcomeTitle}>{title}</Text>
           <Text style={[styles.centerBody, error && { color: colors.red }]}>{subtitle}</Text>
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 60 }}>
+        <Pressable style={styles.pinRow} onPress={() => inputRef.current?.focus()}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <View key={i} style={[styles.pinBox, error && { borderColor: colors.red }]}>
+            <View key={i} style={[styles.pinBox, error && styles.pinBoxError]}>
               {currentPin[i] && <View style={styles.pinDot} />}
             </View>
           ))}
-        </View>
-        {/* <View style={{ marginHorizontal: 20, marginTop: 40 }}>
-          <FieldSwitch label="Use Face ID" code="Enable biometrics for faster login" value={useBiometrics} onPress={() => setUseBiometrics(v => !v)} />
-        </View> */}
+        </Pressable>
       </ScrollView>
       <View style={themeStyles.actionStack}>
         <PrimaryButton label={step === 'create' ? 'Create PIN' : 'Confirm PIN'} onPress={handleNext} />
@@ -79,7 +86,21 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
 
 const styles = StyleSheet.create({
   header: {
-    // ... existing styles if any, or new ones
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  eyebrow: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.1,
+  },
+  headerTitle: {
+    marginTop: 3,
+    color: colors.ink,
+    fontSize: 22,
+    fontWeight: '700',
   },
   pinInputHidden: {
     position: 'absolute',
@@ -88,7 +109,7 @@ const styles = StyleSheet.create({
     height: 0,
   },
   detailContent: {
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
   welcomeCopy: {
     paddingHorizontal: 32,
@@ -110,14 +131,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pinBox: {
-    width: 44,
-    height: 54,
-    borderRadius: 16,
+    width: 42,
+    height: 52,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pinRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 60,
+  },
+  pinBoxError: {
+    borderColor: colors.red,
   },
   pinDot: {
     width: 14,
