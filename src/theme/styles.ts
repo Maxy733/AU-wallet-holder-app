@@ -4,24 +4,7 @@ import { colors } from './constants';
 export const styles = StyleSheet.create({
   appShell: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EDE7E3',
-  },
-  phone: {
-    width: 375,
-    height: 760,
-    maxHeight: '100%',
     backgroundColor: colors.bg,
-    borderRadius: 44,
-    borderWidth: 1,
-    borderColor: '#17140F',
-    overflow: 'hidden',
-    shadowColor: '#1C1A17',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.35,
-    shadowRadius: 40,
-    elevation: 12,
   },
   screen: {
     flex: 1,

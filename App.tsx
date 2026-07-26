@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { SafeAreaView, StatusBar, View } from 'react-native';
+import { SafeAreaView, StatusBar } from 'react-native';
 
 // 1. Import your theme and types
 import { styles } from './src/theme/styles';
@@ -107,12 +107,10 @@ export default function App() {
   return (
     <SafeAreaView style={styles.appShell}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
-      <View style={styles.phone}>
-        {content}
-        {showNav && (
-          <BottomNav active={screen as 'wallet' | 'history' | 'settings'} go={setScreen} />
-        )}
-      </View>
+      {content}
+      {showNav && (
+        <BottomNav active={screen as 'wallet' | 'history' | 'settings'} go={setScreen} />
+      )}
     </SafeAreaView>
   );
 }
