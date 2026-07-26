@@ -1,12 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { colors } from '../theme/constants';
 
-type HeaderProps = {
-  eyebrow: string;
-  title: string;
-};
-
-export function Header({ eyebrow, title }: HeaderProps) {
+export function Header({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
     <View style={styles.header}>
       <View>
@@ -23,10 +19,37 @@ export function Header({ eyebrow, title }: HeaderProps) {
 }
 
 const styles = StyleSheet.create({
-  // TODO: Move header, eyebrow, headerTitle, avatar, and avatarText styles here
-  header: {},
-  eyebrow: {},
-  headerTitle: {},
-  avatar: {},
-  avatarText: {},
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  eyebrow: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  headerTitle: {
+    color: colors.ink,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.red,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
 });

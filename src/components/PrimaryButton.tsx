@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { colors } from '../theme/constants';
 
 type PrimaryButtonProps = {
   label: string;
@@ -8,14 +9,30 @@ type PrimaryButtonProps = {
 
 export function PrimaryButton({ label, onPress }: PrimaryButtonProps) {
   return (
-    <Pressable style={styles.primaryButton} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+      onPress={onPress}
+    >
       <Text style={styles.primaryText}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  // TODO: Move styles.primaryButton and styles.primaryText here
-  primaryButton: {},
-  primaryText: {},
+  primaryButton: {
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.86,
+  },
+  primaryText: {
+    color: colors.card,
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
