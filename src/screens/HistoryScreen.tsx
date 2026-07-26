@@ -4,6 +4,7 @@ import { StatusChrome } from '../components/StatusChrome';
 import { Header } from '../components/Header';
 import { SectionLabel } from '../components/SectionLabel';
 import { Notice } from '../components/Notice';
+import { BottomNav } from '../components/BottomNav';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
@@ -33,6 +34,7 @@ export function HistoryScreen({ go, history }: { go: (screen: Screen) => void; h
           />
         ))}
       </ScrollView>
+      <BottomNav active="history" go={go} />
     </View>
   );
 }

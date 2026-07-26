@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Pressable, SafeAreaView, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { BackHeader, PrimaryButton } from '../components';
@@ -9,24 +10,14 @@ import { Screen } from '../types';
 export function IdentityAuthScreen({ go }: { go: (screen: Screen) => void }) {
   const [studentId, setStudentId] = useState('');
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-
-  const handleNext = () => {
-    if (!studentId.trim() || !email.trim()) {
-      setError('Enter your student ID and university email.');
-      return;
-    }
-    setError('');
-    go('identity_proofing');
-  };
 
   return (
     <View style={themeStyles.screen}>
       <StatusChrome />
-      <BackHeader title="AU account" subtitle="Step 2 of 3" onBack={() => go('create_pin')} />
+      <BackHeader title="Log In" subtitle="Step 2 of 3" onBack={() => go('create_pin')} />
       <View style={styles.welcomeCopy}>
-        <Text style={styles.welcomeTitle}>Account information</Text>
-        <Text style={styles.centerBody}>Enter the AU details connected to your student account.</Text>
+        <Text style={styles.welcomeTitle}>Verify Account</Text>
+        <Text style={styles.centerBody}>Enter your student credentials to log into your portal.</Text>
       </View>
       <View style={[styles.infoPanel, { marginHorizontal: 20, marginTop: 40, gap: 12 }]}>
         <Text style={styles.panelHeading}>Student ID</Text>
@@ -35,7 +26,7 @@ export function IdentityAuthScreen({ go }: { go: (screen: Screen) => void }) {
           placeholder="e.g., 6412345"
           placeholderTextColor={colors.muted}
           value={studentId}
-          onChangeText={(value) => { setStudentId(value); setError(''); }}
+          onChangeText={setStudentId}
         />
         <Text style={styles.panelHeading}>University Email</Text>
         <TextInput
@@ -43,14 +34,13 @@ export function IdentityAuthScreen({ go }: { go: (screen: Screen) => void }) {
           placeholder="student@u.au.edu"
           placeholderTextColor={colors.muted}
           value={email}
-          onChangeText={(value) => { setEmail(value); setError(''); }}
+          onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        {!!error && <Text style={styles.errorText}>{error}</Text>}
       </View>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label="Continue" onPress={handleNext} />
+        <PrimaryButton label="Next" onPress={() => go('wallet')} />
       </View>
     </View>
   );
@@ -104,10 +94,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.ink,
-  },
-  errorText: {
-    color: colors.red,
-    fontSize: 12,
-    lineHeight: 17,
   },
 });

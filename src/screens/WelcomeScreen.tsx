@@ -22,7 +22,6 @@ export function WelcomeScreen({ onSignIn }: { onSignIn: () => void }) {
       </View>
       <View style={styles.loginPanel}>
         <Text style={styles.panelHeading}>Continue as student</Text>
-        <Text style={styles.panelCopy}>Use AU account or biometric unlock to access your credential wallet.</Text>
         <PrimaryButton label="Sign in with AU Account" onPress={onSignIn} />
       </View>
     </View>
@@ -48,8 +47,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   welcomeLogo: {
-    width: 200,
-    height: 200,
+    width: 120,
+    height: 120,
     resizeMode: 'contain',
   },
   welcomeCopy: {
@@ -82,7 +81,7 @@ const styles = StyleSheet.create({
     marginTop: 100,
     marginHorizontal: 20,
     padding: 20,
-    height: 162,
+    height: 140,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.border,
@@ -98,10 +97,5 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 16,
     fontWeight: '700',
-  },
-  panelCopy: {
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 15,
   },
 });
