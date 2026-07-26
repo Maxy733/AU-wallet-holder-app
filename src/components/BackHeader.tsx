@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { styles as themeStyles } from '../theme/styles';
 
 type BackHeaderProps = {
   title: string;
@@ -9,23 +10,14 @@ type BackHeaderProps = {
 
 export function BackHeader({ title, subtitle, onBack }: BackHeaderProps) {
   return (
-    <View style={styles.backHeader}>
-      <Pressable style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backArrow}>←</Text>
+    <View style={themeStyles.backHeader}>
+      <Pressable style={themeStyles.backButton} onPress={onBack}>
+        <Text style={themeStyles.backArrow}>←</Text>
       </Pressable>
       <View>
-        <Text style={styles.backTitle}>{title}</Text>
-        <Text style={styles.backSub}>{subtitle}</Text>
+        <Text style={themeStyles.backTitle}>{title}</Text>
+        <Text style={themeStyles.backSub}>{subtitle}</Text>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  // TODO: Move backHeader, backButton, backArrow, backTitle, and backSub styles here
-  backHeader: {},
-  backButton: {},
-  backArrow: {},
-  backTitle: {},
-  backSub: {},
-});

@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { BackHeader } from '../components/BackHeader';
 import { InfoPanel } from '../components/InfoPanel';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -12,7 +11,6 @@ import { Screen } from '../types';
 export function CredentialScreen({ go }: { go: (screen: Screen) => void }) {
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <BackHeader title="Education Transcript VC" subtitle="Stored · ready for verification" onBack={() => go('wallet')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
         <CredentialCard compact />

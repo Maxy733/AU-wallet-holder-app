@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { Header } from '../components/Header';
 import { SectionLabel } from '../components/SectionLabel';
 import { Notice } from '../components/Notice';
@@ -18,7 +17,6 @@ type HistoryItem = {
 export function HistoryScreen({ go, history }: { go: (screen: Screen) => void; history: HistoryItem[] }) {
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <Header eyebrow="Wallet Activity" title="History" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.scrollBottom}>
         <SectionLabel>THIS WEEK</SectionLabel>
@@ -34,7 +32,6 @@ export function HistoryScreen({ go, history }: { go: (screen: Screen) => void; h
           />
         ))}
       </ScrollView>
-      <BottomNav active="history" go={go} />
     </View>
   );
 }

@@ -4,7 +4,6 @@ import { Pressable, SafeAreaView, StyleSheet, Text, TextInput, View, ScrollView 
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { BackHeader, PrimaryButton } from '../components';
-import { StatusChrome } from '../components/StatusChrome';
 import { Screen } from '../types';
 
 export function IdentityAuthScreen({ go }: { go: (screen: Screen) => void }) {
@@ -13,7 +12,6 @@ export function IdentityAuthScreen({ go }: { go: (screen: Screen) => void }) {
 
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <BackHeader title="Log In" subtitle="Step 2 of 3" onBack={() => go('create_pin')} />
       <View style={styles.welcomeCopy}>
         <Text style={styles.welcomeTitle}>Verify Account</Text>

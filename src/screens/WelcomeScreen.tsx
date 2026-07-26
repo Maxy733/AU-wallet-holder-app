@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { PrimaryButton } from '../components';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
@@ -8,7 +7,6 @@ import { styles as themeStyles } from '../theme/styles';
 export function WelcomeScreen({ onSignIn }: { onSignIn: () => void }) {
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <View style={styles.logoGlow} />
       <View style={styles.logoContainer}>
         <Image source={require('../../assets/Assumption_University_of_Thailand_(logo).png')} style={styles.welcomeLogo} />

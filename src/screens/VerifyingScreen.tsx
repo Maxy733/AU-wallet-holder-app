@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { PrimaryButton } from '../components';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
@@ -26,7 +25,6 @@ export function VerifyingScreen({ go }: { go: (screen: Screen) => void }) {
 
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 }}>
         <Text style={[styles.welcomeTitle, { fontSize: 22 }]}>Verification in Progress</Text>
         <Text style={[styles.centerBody, { marginBottom: 40 }]}>

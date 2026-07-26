@@ -4,7 +4,6 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View 
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { BackHeader, PrimaryButton } from '../components';
-import { StatusChrome } from '../components/StatusChrome';
 import { Screen } from '../types';
 
 export function IdentityProofingScreen({ go }: { go: (screen: Screen) => void }) {
@@ -13,7 +12,6 @@ export function IdentityProofingScreen({ go }: { go: (screen: Screen) => void })
 
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <BackHeader title="Personal Details" subtitle="Step 3 of 3" onBack={() => go('identity_auth')} />
       <ScrollView contentContainerStyle={styles.detailContent}>
         <View style={[styles.infoPanel, { gap: 8 }]}>

@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme/constants';
 import { copy } from '../theme/mockData';
+import { styles as themeStyles } from '../theme/styles'; // <-- Import your centralized styles
 
 export function CredentialCard({ compact = false }: { compact?: boolean }) {
   return (
@@ -10,54 +11,33 @@ export function CredentialCard({ compact = false }: { compact?: boolean }) {
       colors={[colors.red, colors.redMid, colors.redDark]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.credentialCard, compact && styles.credentialCardCompact]}
+      style={[themeStyles.credentialCard, compact && themeStyles.credentialCardCompact]}
     >
-      <View style={styles.ringOne} />
-      <View style={styles.ringTwo} />
-      <View style={styles.ringThree} />
-      <View style={styles.credentialTop}>
-        <View style={styles.auSeal}>
-          <Text style={styles.auSealText}>AU</Text>
+      <View style={themeStyles.ringOne} />
+      <View style={themeStyles.ringTwo} />
+      <View style={themeStyles.ringThree} />
+      <View style={themeStyles.credentialTop}>
+        <View style={themeStyles.auSeal}>
+          <Text style={themeStyles.auSealText}>AU</Text>
         </View>
-        <View style={styles.activePill}>
-          <Text style={styles.activeDot}>●</Text>
-          <Text style={styles.activeText}>ACTIVE</Text>
+        <View style={themeStyles.activePill}>
+          <Text style={themeStyles.activeDot}>●</Text>
+          <Text style={themeStyles.activeText}>ACTIVE</Text>
         </View>
       </View>
-      <Text style={styles.cardEyebrow}>EDUCATION TRANSCRIPT · VC</Text>
-      <Text style={styles.degree}>{copy.degree}</Text>
-      <Text style={styles.major}>{copy.majorFull}</Text>
-      <View style={styles.cardMetaRow}>
+      <Text style={themeStyles.cardEyebrow}>EDUCATION TRANSCRIPT · VC</Text>
+      <Text style={themeStyles.degree}>{copy.degree}</Text>
+      <Text style={themeStyles.major}>{copy.majorFull}</Text>
+      <View style={themeStyles.cardMetaRow}>
         <View>
-          <Text style={styles.cardMetaLabel}>{compact ? 'Holder' : 'Issued by'}</Text>
-          <Text style={styles.cardMetaValue}>{compact ? copy.studentDetail : 'Assumption University'}</Text>
+          <Text style={themeStyles.cardMetaLabel}>{compact ? 'Holder' : 'Issued by'}</Text>
+          <Text style={themeStyles.cardMetaValue}>{compact ? copy.studentDetail : 'Assumption University'}</Text>
         </View>
-        <View style={styles.cardMetaRight}>
-          <Text style={styles.cardMetaLabel}>{compact ? 'GPA' : 'Graduated'}</Text>
-          <Text style={styles.cardMetaValue}>{compact ? copy.gpa : copy.graduationDisplay}</Text>
+        <View style={themeStyles.cardMetaRight}>
+          <Text style={themeStyles.cardMetaLabel}>{compact ? 'GPA' : 'Graduated'}</Text>
+          <Text style={themeStyles.cardMetaValue}>{compact ? copy.gpa : copy.graduationDisplay}</Text>
         </View>
       </View>
     </LinearGradient>
   );
 }
-
-const styles = StyleSheet.create({
-  credentialCard: {},
-  credentialCardCompact: {},
-  ringOne: {},
-  ringTwo: {},
-  ringThree: {},
-  credentialTop: {},
-  auSeal: {},
-  auSealText: {},
-  activePill: {},
-  activeDot: {},
-  activeText: {},
-  cardEyebrow: {},
-  degree: {},
-  major: {},
-  cardMetaRow: {},
-  cardMetaLabel: {},
-  cardMetaValue: {},
-  cardMetaRight: {},
-});

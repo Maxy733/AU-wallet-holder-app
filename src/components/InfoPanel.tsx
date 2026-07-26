@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { colors } from '../theme/constants';
+import { styles as themeStyles } from '../theme/styles'; // <-- Import your centralized styles
 
 export function InfoPanel({
   title,
@@ -12,14 +13,14 @@ export function InfoPanel({
   children?: React.ReactNode;
 }) {
   return (
-    <View style={styles.infoPanel}>
-      <Text style={styles.infoTitle}>{title}</Text>
+    <View style={themeStyles.infoPanel}>
+      <Text style={themeStyles.infoTitle}>{title}</Text>
       {rows?.map(([key, value]) => (
-        <View style={styles.infoRow} key={`${title}-${key}`}>
-          <Text style={styles.infoKey}>{key}</Text>
+        <View style={themeStyles.infoRow} key={`${title}-${key}`}>
+          <Text style={themeStyles.infoKey}>{key}</Text>
           <Text
             style={[
-              styles.infoValue,
+              themeStyles.infoValue,
               value === 'Active' && { color: colors.green },
               value === 'Hidden' && { color: colors.hidden },
             ]}
@@ -32,11 +33,3 @@ export function InfoPanel({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  infoPanel: {},
-  infoTitle: {},
-  infoRow: {},
-  infoKey: {},
-  infoValue: {},
-});

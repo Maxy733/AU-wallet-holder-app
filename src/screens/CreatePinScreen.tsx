@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { Header, PrimaryButton } from '../components';
-import { StatusChrome } from '../components/StatusChrome';
 import { Screen } from '../types';
 import { FieldSwitch } from '../components/FieldSwitch';
 
@@ -45,7 +44,6 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
 
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <TextInput ref={inputRef} style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="numeric" autoFocus />
       <Header eyebrow="Step 1 of 3" title="Create Account" />
       <ScrollView contentContainerStyle={styles.detailContent}>

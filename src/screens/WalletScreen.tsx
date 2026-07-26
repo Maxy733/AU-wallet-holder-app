@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { Header, SectionLabel } from '../components';
 import { CredentialCard } from '../components/CredentialCard';
 import { SummaryStats } from '../components/SummaryStats';
@@ -14,7 +13,6 @@ import { Screen } from '../types';
 export function WalletScreen({ go }: { go: (screen: Screen) => void }) {
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <Header eyebrow="GOOD AFTERNOON" title={copy.student} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.scrollBottom}>
         <SectionLabel>YOUR CREDENTIALS</SectionLabel>
