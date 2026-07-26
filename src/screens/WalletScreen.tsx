@@ -26,7 +26,7 @@ export function WalletScreen({ go }: { go: (screen: Screen) => void }) {
           tint={colors.red}
           bg={colors.softRed}
           title="AU Registrar wants to issue a credential"
-          subtitle="Education Transcript VC · tap to review"
+          subtitle="Transportation VC · tap to review"
           onPress={() => go('offer')}
         />
         <Notice

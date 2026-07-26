@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
@@ -14,12 +14,29 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
   const [useBiometrics, setUseBiometrics] = useState(true);
   const inputRef = useRef<TextInput>(null);
 
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
   const handlePinChange = (text: string) => {
     setError(false);
     if (step === 'create') {
       setPin(text);
     } else {
       setConfirmPin(text);
+    }
+  };
+
+  const handlePinPress = () => {
+    if (inputRef.current?.isFocused()) {
+      // If it thinks it's already focused, blur it and force a refocus
+      inputRef.current.blur();
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50); // A tiny 50ms delay gives the UI time to reset
+    } else {
+      // If it's not focused, just focus it normally
+      inputRef.current?.focus();
     }
   };
 
@@ -45,16 +62,16 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
   return (
     <View style={themeStyles.screen}>
       <TextInput ref={inputRef} style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="numeric" autoFocus />
-      <Header eyebrow="Step 1 of 3" title="Create Account" />
+      <Header eyebrow="Step 1 of 3" title="Create Account" showAvatar={false} />
       <ScrollView contentContainerStyle={styles.detailContent}>
         <View style={styles.welcomeCopy}>
           <Text style={styles.welcomeTitle}>{title}</Text>
           <Text style={[styles.centerBody, error && { color: colors.red }]}>{subtitle}</Text>
         </View>
-        <Pressable style={styles.pinContainer} onPress={() => inputRef.current?.focus()}>
+        <Pressable style={styles.pinContainer} onPress={handlePinPress}>
           {Array.from({ length: 6 }).map((_, i) => (
             <View key={i} style={[styles.pinBox, error && { borderColor: colors.red }]}>
-              {currentPin[i] && <View style={styles.pinDot} />}
+              {currentPin[i] ? <View style={styles.pinDot} /> : null}
             </View>
           ))}
         </Pressable>
@@ -63,12 +80,11 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
         </View> }
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        {step === 'create' && pin.length === 6 && (
-          <PrimaryButton label="Create PIN" onPress={handleNext} />
-        )}
-        {step === 'confirm' && confirmPin.length === 6 && (
-          <PrimaryButton label="Confirm PIN" onPress={handleNext} />
-        )}
+        <PrimaryButton
+          label={step === 'create' ? 'Create PIN' : 'Confirm PIN'}
+          onPress={handleNext}
+          disabled={currentPin.length !== 6}
+        />
       </View>
     </View>
   );

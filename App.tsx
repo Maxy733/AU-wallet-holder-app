@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { SafeAreaView, StatusBar, View } from 'react-native';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 // 1. Import your theme and types
 import { styles } from './src/theme/styles';
@@ -14,7 +15,6 @@ import { IdentityProofingScreen } from './src/screens/IdentityProofingScreen';
 import { VerifyingScreen } from './src/screens/VerifyingScreen';
 import { WalletScreen } from './src/screens/WalletScreen';
 import { OfferScreen } from './src/screens/OfferScreen';
-import { SuccessScreen } from './src/screens/SuccessScreen';
 import { CredentialScreen } from './src/screens/CredentialScreen';
 import { ShareScreen } from './src/screens/ShareScreen';
 import { VerificationScreen } from './src/screens/VerificationScreen';
@@ -25,7 +25,7 @@ import { BottomNav } from './src/components';
 
 // 3. The Core App Shell
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('welcome');
+  const [screen, setScreen] = useState<Screen>('create_pin');
   const [shareFields, setShareFields] = useState({
     degree: true,
     major: true,
@@ -39,12 +39,13 @@ export default function App() {
     'wallet',
     'history',
     'settings',
+    'success',
   ].includes(screen);
 
   const content = useMemo(() => {
     switch (screen) {
       case 'welcome':
-        return <WelcomeScreen onSignIn={() => setScreen('create_pin')} />;
+        return <WelcomeScreen onSignIn={() => setScreen('wallet')} />;
       case 'identity_auth':
         return <IdentityAuthScreen go={setScreen} />;
       case 'create_pin':
@@ -69,7 +70,7 @@ export default function App() {
       case 'offer':
         return <OfferScreen go={setScreen} />;
       case 'success':
-        return <SuccessScreen go={setScreen} />;
+        return <WalletScreen go={setScreen} />;
       case 'credential':
         return <CredentialScreen go={setScreen} />;
       case 'share':
@@ -105,14 +106,17 @@ export default function App() {
   }, [screen, shareFields]);
 
   return (
+    <SafeAreaProvider>
     <SafeAreaView style={styles.appShell}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
-      <View style={styles.phone}>
-        {content}
-        {showNav && (
-          <BottomNav active={screen as 'wallet' | 'history' | 'settings'} go={setScreen} />
-        )}
-      </View>
+      {content}
+      {showNav && (
+        <BottomNav
+          active={screen === 'success' ? 'wallet' : (screen as 'wallet' | 'history' | 'settings')}
+          go={setScreen}
+        />
+      )}
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
