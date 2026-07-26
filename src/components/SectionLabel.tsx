@@ -1,10 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
+import { styles as themeStyles } from '../theme/styles';
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.sectionLabel}>{children}</Text>;
+  return <Text style={themeStyles.sectionLabel}>{children}</Text>;
 }
-
-const styles = StyleSheet.create({
-  sectionLabel: {},
-});

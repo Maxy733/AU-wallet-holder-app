@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Pressable, Text } from 'react-native';
+import { styles as themeStyles } from '../theme/styles'; // <-- Import centralized styles
 
 type SecondaryButtonProps = {
   label: string;
@@ -8,14 +9,8 @@ type SecondaryButtonProps = {
 
 export function SecondaryButton({ label, onPress }: SecondaryButtonProps) {
   return (
-    <Pressable style={styles.secondaryButton} onPress={onPress}>
-      <Text style={styles.secondaryText}>{label}</Text>
+    <Pressable style={themeStyles.secondaryButton} onPress={onPress}>
+      <Text style={themeStyles.secondaryText}>{label}</Text>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  // TODO: Move styles.secondaryButton and styles.secondaryText here
-  secondaryButton: {},
-  secondaryText: {},
-});

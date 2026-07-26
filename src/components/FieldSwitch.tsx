@@ -1,35 +1,29 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { styles as themeStyles } from '../theme/styles';
 
-type FieldSwitchProps = {
+export function FieldSwitch({
+  label,
+  code,
+  value,
+  onPress,
+  last,
+}: {
   label: string;
   code: string;
   value: boolean;
   onPress: () => void;
   last?: boolean;
-};
-
-export function FieldSwitch({ label, code, value, onPress, last }: FieldSwitchProps) {
+}) {
   return (
-    <Pressable style={[styles.switchRow, last && { marginBottom: 0 }]} onPress={onPress}>
+    <Pressable style={[themeStyles.switchRow, last && { marginBottom: 0 }]} onPress={onPress}>
       <View>
-        <Text style={styles.switchLabel}>{label}</Text>
-        <Text style={styles.switchCode}>{code}</Text>
+        <Text style={themeStyles.switchLabel}>{label}</Text>
+        <Text style={themeStyles.switchCode}>{code}</Text>
       </View>
-      <View style={[styles.switchTrack, value && styles.switchTrackOn]}>
-        <View style={[styles.switchKnob, value && styles.switchKnobOn]} />
+      <View style={[themeStyles.switchTrack, value && themeStyles.switchTrackOn]}>
+        <View style={[themeStyles.switchKnob, value && themeStyles.switchKnobOn]} />
       </View>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  // TODO: Move switchRow, switchLabel, switchCode, switchTrack, switchTrackOn, switchKnob, and switchKnobOn styles here
-  switchRow: {},
-  switchLabel: {},
-  switchCode: {},
-  switchTrack: {},
-  switchTrackOn: {},
-  switchKnob: {},
-  switchKnobOn: {},
-});

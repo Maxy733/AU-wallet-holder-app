@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { PrimaryButton, SecondaryButton } from '../components';
 import { BottomNav } from '../components/BottomNav';
 import { colors } from '../theme/constants';
@@ -10,7 +9,6 @@ import { Screen } from '../types';
 export function SuccessScreen({ go }: { go: (screen: Screen) => void }) {
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <View style={styles.simpleTop}>
         <Text style={styles.pageTitle}>Issuance Success</Text>
         <Pressable onPress={() => go('wallet')}>
@@ -37,7 +35,8 @@ export function SuccessScreen({ go }: { go: (screen: Screen) => void }) {
       </View>
       <View style={styles.successActions}>
         <PrimaryButton label="▣  View Pass" onPress={() => go('credential')} />
-        <SecondaryButton label="Go to Home" onPress={() => go('wallet')} />
+        {/* Change the secondary action to point to login */}
+        <SecondaryButton label="Continue to Login" onPress={() => go('identity_auth')} />
       </View>
       <BottomNav active="wallet" go={go} />
     </View>

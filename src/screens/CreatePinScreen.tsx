@@ -1,16 +1,17 @@
 import React, { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
-import { PrimaryButton } from '../components';
-import { StatusChrome } from '../components/StatusChrome';
+import { Header, PrimaryButton } from '../components';
 import { Screen } from '../types';
+import { FieldSwitch } from '../components/FieldSwitch';
 
 export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }) {
   const [step, setStep] = useState<'create' | 'confirm'>('create');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState(false);
+  const [useBiometrics, setUseBiometrics] = useState(true);
   const inputRef = useRef<TextInput>(null);
 
   const handlePinChange = (text: string) => {
@@ -19,66 +20,55 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
       setPin(text);
     } else {
       setConfirmPin(text);
-      if (text.length === 6) {
-        if (pin !== text) {
-          setError(true);
-          setTimeout(() => {
-            setPin('');
-            setConfirmPin('');
-            setStep('create');
-            setError(false);
-          }, 1000);
-        }
-      }
     }
   };
 
   const handleNext = () => {
     setError(false);
-    if (currentPin.length !== 6) {
-      setError(true);
-      return;
-    }
     if (step === 'create') {
       setStep('confirm');
     } else if (pin === confirmPin) {
-      go('identity_auth');
+      go('identity_proofing');
     } else {
       setError(true);
+      setTimeout(() => {
+        setConfirmPin('');
+        setError(false);
+      }, 1000);
     }
   };
 
   const currentPin = step === 'create' ? pin : confirmPin;
   const title = step === 'create' ? 'Create Wallet PIN' : 'Confirm Wallet PIN';
-  const subtitle = error
-    ? currentPin.length !== 6
-      ? 'Enter all 6 digits to continue.'
-      : 'PINs did not match. Try again.'
-    : 'Set a local code to securely lock your credentials on this phone.';
+  const subtitle = error ? 'PINs did not match. Try again.' : 'Set a local code to securely lock your credentials on this phone.';
 
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
-      <TextInput ref={inputRef} style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="number-pad" autoFocus />
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>STEP 1 OF 3</Text>
-        <Text style={styles.headerTitle}>Create account</Text>
-      </View>
+      <TextInput ref={inputRef} style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="numeric" autoFocus />
+      <Header eyebrow="Step 1 of 3" title="Create Account" />
       <ScrollView contentContainerStyle={styles.detailContent}>
         <View style={styles.welcomeCopy}>
           <Text style={styles.welcomeTitle}>{title}</Text>
           <Text style={[styles.centerBody, error && { color: colors.red }]}>{subtitle}</Text>
         </View>
-        <Pressable style={styles.pinRow} onPress={() => inputRef.current?.focus()}>
+        <Pressable style={styles.pinContainer} onPress={() => inputRef.current?.focus()}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <View key={i} style={[styles.pinBox, error && styles.pinBoxError]}>
+            <View key={i} style={[styles.pinBox, error && { borderColor: colors.red }]}>
               {currentPin[i] && <View style={styles.pinDot} />}
             </View>
           ))}
         </Pressable>
+        { <View style={{ marginHorizontal: 20, marginTop: 40 }}>
+          <FieldSwitch label="Use Face ID" code="Enable biometrics for faster login" value={useBiometrics} onPress={() => setUseBiometrics(v => !v)} />
+        </View> }
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label={step === 'create' ? 'Create PIN' : 'Confirm PIN'} onPress={handleNext} />
+        {step === 'create' && pin.length === 6 && (
+          <PrimaryButton label="Create PIN" onPress={handleNext} />
+        )}
+        {step === 'confirm' && confirmPin.length === 6 && (
+          <PrimaryButton label="Confirm PIN" onPress={handleNext} />
+        )}
       </View>
     </View>
   );
@@ -86,21 +76,7 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  eyebrow: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.1,
-  },
-  headerTitle: {
-    marginTop: 3,
-    color: colors.ink,
-    fontSize: 22,
-    fontWeight: '700',
+    // ... existing styles if any, or new ones
   },
   pinInputHidden: {
     position: 'absolute',
@@ -109,7 +85,7 @@ const styles = StyleSheet.create({
     height: 0,
   },
   detailContent: {
-    paddingBottom: 120,
+    paddingBottom: 20,
   },
   welcomeCopy: {
     paddingHorizontal: 32,
@@ -130,24 +106,21 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     textAlign: 'center',
   },
-  pinBox: {
-    width: 42,
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pinRow: {
+  pinContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
     marginTop: 60,
   },
-  pinBoxError: {
-    borderColor: colors.red,
+  pinBox: {
+    width: 44,
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pinDot: {
     width: 14,

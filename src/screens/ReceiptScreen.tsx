@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { BackHeader, PrimaryButton } from '../components';
 import { copy } from '../theme/mockData';
 import { styles as themeStyles } from '../theme/styles';
@@ -10,7 +9,6 @@ import { InfoPanel } from '../components/InfoPanel';
 export function ReceiptScreen({ go }: { go: (screen: Screen) => void }) {
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <BackHeader title="Disclosure Receipt" subtitle="Shared with Employer A" onBack={() => go('history')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
         <InfoPanel

@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { BackHeader, FieldSwitch, InfoPanel, PrimaryButton } from '../components';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
@@ -29,7 +28,6 @@ export function ShareScreen({
 
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <BackHeader title="Share transcript proof" subtitle="Request from Employer A" onBack={() => go('credential')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
         <InfoPanel title="Requested fields">

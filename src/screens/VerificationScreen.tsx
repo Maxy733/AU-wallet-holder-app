@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
-import { StatusChrome } from '../components/StatusChrome';
 import { BackHeader, InfoPanel, PrimaryButton } from '../components';
 import { QrMock } from '../components/QrMock';
 import { colors } from '../theme/constants';
@@ -11,7 +10,6 @@ import { Screen } from '../types';
 export function VerificationScreen({ go }: { go: (screen: Screen) => void }) {
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
       <BackHeader title="Verification result" subtitle="Employer A portal view" onBack={() => go('share')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
         <View style={styles.validBanner}>

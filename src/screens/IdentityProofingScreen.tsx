@@ -1,41 +1,22 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { BackHeader, PrimaryButton } from '../components';
-import { StatusChrome } from '../components/StatusChrome';
 import { Screen } from '../types';
 
-export function IdentityProofingScreen({ go, onComplete }: { go: (screen: Screen) => void; onComplete: () => void }) {
+export function IdentityProofingScreen({ go }: { go: (screen: Screen) => void }) {
   const [passport, setPassport] = useState('');
   const [nationalId, setNationalId] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [graduationDate, setGraduationDate] = useState('');
-  const [error, setError] = useState('');
-
-  const handleComplete = () => {
-    if (!fullName.trim() || !passport.trim() || nationalId.length !== 13 || !graduationDate.trim()) {
-      setError('Complete every field and enter a 13-digit National ID.');
-      return;
-    }
-    setError('');
-    onComplete();
-  };
 
   return (
     <View style={themeStyles.screen}>
-      <StatusChrome />
-      <BackHeader title="Personal details" subtitle="Step 3 of 3" onBack={() => go('identity_auth')} />
+      <BackHeader title="Personal Details" subtitle="Step 3 of 3" onBack={() => go('identity_auth')} />
       <ScrollView contentContainerStyle={styles.detailContent}>
         <View style={[styles.infoPanel, { gap: 8 }]}>
           <Text style={styles.switchLabel}>Full Name (as per Passport)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your full name"
-            placeholderTextColor={colors.muted}
-            value={fullName}
-            onChangeText={(value) => { setFullName(value); setError(''); }}
-          />
+          <View style={[styles.settingRow, { backgroundColor: colors.bg }]}><Text>Student</Text></View>
 
           <Text style={styles.switchLabel}>Passport Number</Text>
           <TextInput
@@ -43,7 +24,7 @@ export function IdentityProofingScreen({ go, onComplete }: { go: (screen: Screen
             placeholder="Enter passport number"
             placeholderTextColor={colors.muted}
             value={passport}
-            onChangeText={(value) => { setPassport(value); setError(''); }}
+            onChangeText={setPassport}
           />
 
           <Text style={styles.switchLabel}>National ID</Text>
@@ -52,24 +33,17 @@ export function IdentityProofingScreen({ go, onComplete }: { go: (screen: Screen
             placeholder="Enter 13-digit ID"
             placeholderTextColor={colors.muted}
             value={nationalId}
-            onChangeText={(value) => { setNationalId(value.replace(/\D/g, '')); setError(''); }}
+            onChangeText={setNationalId}
             keyboardType="numeric"
             maxLength={13}
           />
 
           <Text style={styles.switchLabel}>Expected Graduation Date</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="MM / YYYY"
-            placeholderTextColor={colors.muted}
-            value={graduationDate}
-            onChangeText={(value) => { setGraduationDate(value); setError(''); }}
-          />
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
+          <View style={[styles.settingRow, { backgroundColor: colors.bg }]}><Text>Expected graduation date</Text></View>
         </View>
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label="Create account" onPress={handleComplete} />
+        <PrimaryButton label="Submit to Registrar" onPress={() => go('verifying')} />
       </View>
     </View>
   );
@@ -111,10 +85,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.ink,
-  },
-  errorText: {
-    color: colors.red,
-    fontSize: 12,
-    lineHeight: 17,
   },
 });

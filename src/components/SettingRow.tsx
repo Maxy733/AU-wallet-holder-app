@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-// import { colors } from '../theme'; // Assuming you have a theme file
+import { View, Text } from 'react-native';
+import { styles as themeStyles } from '../theme/styles'; // <-- Import centralized styles
+import { colors } from '../theme/constants'; // <-- Import colors for the danger state
 
 type SettingRowProps = {
   label: string;
@@ -10,27 +11,15 @@ type SettingRowProps = {
 
 export function SettingRow({ label, danger, toggleOn }: SettingRowProps) {
   return (
-    <View style={styles.settingRow}>
-      <Text style={[styles.settingLabel, danger && { color: 'red' /* colors.red */ }]}>{label}</Text>
+    <View style={themeStyles.settingRow}>
+      <Text style={[themeStyles.settingLabel, danger && { color: colors.red }]}>{label}</Text>
       {toggleOn ? (
-        <View style={[styles.switchTrack, styles.switchTrackOn]}>
-          <View style={[styles.switchKnob, styles.switchKnobOn]} />
+        <View style={[themeStyles.switchTrack, themeStyles.switchTrackOn]}>
+          <View style={[themeStyles.switchKnob, themeStyles.switchKnobOn]} />
         </View>
       ) : (
-        <Text style={styles.chevron}>›</Text>
+        <Text style={themeStyles.chevron}>›</Text>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  // TODO: Move settingRow, settingLabel, chevron, and switch styles here
-  settingRow: {},
-  settingLabel: {},
-  chevron: {},
-  // You might share switch styles with FieldSwitch or duplicate them
-  switchTrack: {},
-  switchTrackOn: {},
-  switchKnob: {},
-  switchKnobOn: {},
-});
