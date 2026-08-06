@@ -171,3 +171,5 @@ $RECYCLE.BIN/
 
 # JetBrains IDEs
 .idea/
+
+.node_modules
