@@ -10,7 +10,7 @@ An elegant, user-centric mobile wallet prototype built with React Native and Exp
 
 ## 🛠️ Key Architectural Features Simulated
 
-* **Account-First Onboarding:** Simulates secure university identity proofing (validating Student ID, university email, passport credentials, and graduation dates) before binding a local security PIN or biometric trigger to the device storage container.
+* **Account-First Onboarding:** Registers with a personal email, submits admission number, date of birth, and passport number for issuer review, and enables local wallet PIN setup only after approval.
 * **Selective Disclosure Engine:** Fully functional UX toggles allow users to maintain complete control over their data privacy. Students can share their degree and major while explicitly keeping sensitive records like GPA or academic standing hidden from prospective employers.
 * **Audit Trail / Disclosure Receipts:** Includes a historic verification tab serving as a cryptographic ledger showing exactly what data left the device, when it was sent, and to which transaction session ID (e.g., `JOB-2026-001`).
 
@@ -57,7 +57,7 @@ npx expo start
 
 ### How to View the App:
 
-* **Physical Device (Recommended):** Download the **Expo Go** app from the iOS App Store or Google Play Store, and scan the terminal's QR code with your phone camera.
+* **Physical Device:** Configure the API base URL with the computer's LAN address or a shared HTTPS backend. `localhost` on the phone refers to the phone itself.
 * **iOS Simulator:** Press `i` in the terminal window (requires Xcode installed on macOS).
 * **Android Emulator:** Press `a` in the terminal window (requires Android Studio installed on Windows/Linux).
 
@@ -69,3 +69,76 @@ npx expo start
 * **Data Standards Simulated:** W3C Verifiable Credentials Data Model v2.0 (JSON-LD / JWT payloads)
 * **Authentication Standard:** WebAuthn / Passkeys (Device-bound biometrics)
 * **Exchange Protocols:** OpenID for Verifiable Credential Issuance (OpenID4VCI) & Presentations (OpenID4VP)
+
+---
+
+## Wallet backend integration
+
+The wallet treats email authentication and issuer approval as separate steps:
+
+1. The user creates an account with a personal email and confirms it.
+2. The user submits admission number, date of birth, and passport number.
+3. AU Registrar reviews the submission.
+4. Only an approved user can create a device-local wallet PIN and enter the wallet.
+
+The wallet calls the NestJS backend only. It does not call the backend database provider directly.
+
+### Environment and mock mode
+
+Create `.env.local` in the project root:
+
+```env
+EXPO_PUBLIC_USE_MOCK_API=true
+EXPO_PUBLIC_API_BASE_URL=http://localhost:3000
+```
+
+Mock mode is enabled unless `EXPO_PUBLIC_USE_MOCK_API=false`. When live integration is approved, set the API URL to an address reachable by the test device:
+
+- Same-computer web testing: `http://localhost:3000`
+- Android emulator: `http://10.0.2.2:3000`
+- Physical phone: the computer's current LAN address, for example `http://192.168.1.9:3000`
+- Shared testing: a deployed HTTPS backend
+
+### Implemented frontend contract
+
+- `POST /auth/register`
+- `POST /auth/resend-confirmation`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /auth/me`
+- `GET /holder-accounts/me`
+- `POST /onboarding-verification/requests`
+- `GET /onboarding-verification/requests/me`
+
+Protected requests send the access token as:
+
+```http
+Authorization: Bearer <access-token>
+```
+
+Access and refresh tokens are stored in Expo SecureStore, restored when the app starts, and cleared on logout or when token refresh fails. A successful refresh replaces both stored tokens, and the original protected request is retried only once. Passwords, tokens and passport values are never logged. The passport input is cleared and discarded immediately after the onboarding request completes.
+
+If SecureStore is unavailable, such as in a browser preview, mock tokens and the mock PIN verifier remain in memory only and disappear when the app restarts. They are never written to AsyncStorage.
+
+After onboarding reports `matched`, the wallet calls `GET /holder-accounts/me` again and requires an `active` account with `confirmedAt` set before enabling device-local wallet PIN creation. The PIN is never sent to the backend.
+
+### Registration and onboarding flow
+
+```text
+Register with personal email
+→ check confirmation email
+→ manually return and log in
+→ submit admission number, date of birth and passport number
+→ wait in under_review
+→ matched activates wallet, or rejected allows correction and resubmission
+```
+
+There is no OTP, application callback, deep link, password-recovery callback, graduation-date input, university-email input or passport-document upload in this integration.
+
+For Android development:
+
+```bash
+npx expo run:android
+npx expo start --dev-client
+```

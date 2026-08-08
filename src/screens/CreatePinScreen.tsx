@@ -1,17 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import { InputAccessoryView, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { Header, PrimaryButton } from '../components';
-import { Screen } from '../types';
-import { FieldSwitch } from '../components/FieldSwitch';
 
-export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }) {
+const PIN_ACCESSORY_ID = 'create-pin-actions';
+
+export default function CreatePinScreen({
+  onComplete,
+}: {
+  onComplete: (pin: string) => Promise<void>;
+}) {
   const [step, setStep] = useState<'create' | 'confirm'>('create');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState(false);
-  const [useBiometrics, setUseBiometrics] = useState(true);
+  const [saving, setSaving] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -40,12 +44,17 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setError(false);
     if (step === 'create') {
       setStep('confirm');
     } else if (pin === confirmPin) {
-      go('identity_proofing');
+      setSaving(true);
+      try {
+        await onComplete(pin);
+      } finally {
+        setSaving(false);
+      }
     } else {
       setError(true);
       setTimeout(() => {
@@ -58,42 +67,62 @@ export default function CreatePinScreen({ go }: { go: (screen: Screen) => void }
   const currentPin = step === 'create' ? pin : confirmPin;
   const title = step === 'create' ? 'Create Wallet PIN' : 'Confirm Wallet PIN';
   const subtitle = error ? 'PINs did not match. Try again.' : 'Set a local code to securely lock your credentials on this phone.';
+  const actionLabel = saving ? 'Securing wallet...' : step === 'create' ? 'Create PIN' : 'Confirm PIN';
 
   return (
     <View style={themeStyles.screen}>
-      <TextInput ref={inputRef} style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="numeric" autoFocus />
-      <Header eyebrow="Step 1 of 3" title="Create Account" showAvatar={false} />
-      <ScrollView contentContainerStyle={styles.detailContent}>
-        <View style={styles.welcomeCopy}>
-          <Text style={styles.welcomeTitle}>{title}</Text>
-          <Text style={[styles.centerBody, error && { color: colors.red }]}>{subtitle}</Text>
-        </View>
-        <Pressable style={styles.pinContainer} onPress={handlePinPress}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <View key={i} style={[styles.pinBox, error && { borderColor: colors.red }]}>
-              {currentPin[i] ? <View style={styles.pinDot} /> : null}
-            </View>
-          ))}
-        </Pressable>
-        { <View style={{ marginHorizontal: 20, marginTop: 40 }}>
-          <FieldSwitch label="Use Face ID" code="Enable biometrics for faster login" value={useBiometrics} onPress={() => setUseBiometrics(v => !v)} />
-        </View> }
-      </ScrollView>
-      <View style={themeStyles.actionStack}>
-        <PrimaryButton
-          label={step === 'create' ? 'Create PIN' : 'Confirm PIN'}
-          onPress={handleNext}
-          disabled={currentPin.length !== 6}
-        />
-      </View>
+      <TextInput ref={inputRef} style={styles.pinInputHidden} value={currentPin} onChangeText={handlePinChange} maxLength={6} keyboardType="numeric" inputAccessoryViewID={Platform.OS === 'ios' ? PIN_ACCESSORY_ID : undefined} autoFocus />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoider}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <Header eyebrow="FINAL SETUP" title="Secure your wallet" showAvatar={false} />
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.detailContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.welcomeCopy}>
+            <Text style={styles.welcomeTitle}>{title}</Text>
+            <Text style={[styles.centerBody, error && { color: colors.red }]}>{subtitle}</Text>
+          </View>
+          <Pressable style={styles.pinContainer} onPress={handlePinPress}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <View key={i} style={[styles.pinBox, error && { borderColor: colors.red }]}>
+                {currentPin[i] ? <View style={styles.pinDot} /> : null}
+              </View>
+            ))}
+          </Pressable>
+        </ScrollView>
+        {Platform.OS !== 'ios' ? (
+          <View style={styles.actions}>
+            <PrimaryButton
+              label={actionLabel}
+              onPress={handleNext}
+              disabled={saving || currentPin.length !== 6}
+            />
+          </View>
+        ) : null}
+      </KeyboardAvoidingView>
+      {Platform.OS === 'ios' ? (
+        <InputAccessoryView nativeID={PIN_ACCESSORY_ID} backgroundColor={colors.bg}>
+          <View style={styles.keyboardAccessory}>
+            <PrimaryButton
+              label={actionLabel}
+              onPress={handleNext}
+              disabled={saving || currentPin.length !== 6}
+            />
+          </View>
+        </InputAccessoryView>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    // ... existing styles if any, or new ones
-  },
+  keyboardAvoider: { flex: 1 },
+  scroll: { flex: 1 },
   pinInputHidden: {
     position: 'absolute',
     opacity: 0,
@@ -101,7 +130,18 @@ const styles = StyleSheet.create({
     height: 0,
   },
   detailContent: {
+    flexGrow: 1,
     paddingBottom: 20,
+  },
+  actions: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  keyboardAccessory: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: colors.bg,
   },
   welcomeCopy: {
     paddingHorizontal: 32,

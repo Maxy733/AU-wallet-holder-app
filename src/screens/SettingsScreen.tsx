@@ -1,12 +1,17 @@
 import React from 'react';
 import { View, ScrollView, Text, StyleSheet, Pressable } from 'react-native';
 import { Header, SectionLabel, SettingRow } from '../components';
-import { BottomNav } from '../components/BottomNav';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
 
-export function SettingsScreen({ go }: { go: (screen: Screen) => void }) {
+export function SettingsScreen({
+  go,
+  onSignOut,
+}: {
+  go: (screen: Screen) => void;
+  onSignOut: () => void;
+}) {
   return (
     <View style={themeStyles.screen}>
       <Header eyebrow="Account" title="Settings" />
@@ -25,7 +30,7 @@ export function SettingsScreen({ go }: { go: (screen: Screen) => void }) {
         <SettingRow label="AU Registrar" />
         <SectionLabel>Account</SectionLabel>
         <SettingRow label="Revoke this device's key" danger />
-        <Pressable style={styles.logoutButton} onPress={() => go('welcome')}>
+        <Pressable style={styles.logoutButton} onPress={onSignOut}>
           <Text style={styles.logoutText}>Log Out</Text>
         </Pressable>
       </ScrollView>

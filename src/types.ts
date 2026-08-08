@@ -1,8 +1,13 @@
 export type Screen =
+  | 'loading'
   | 'welcome'
-  | 'identity_auth' // NEW: Enter student ID & university email
+  | 'registration'
+  | 'check_email'
+  | 'login'
+  | 'identity_submission'
+  | 'onboarding_status'
+  | 'unlock_pin'
   | 'create_pin' // NEW: Setup 6-digit passcode
-  | 'identity_proofing' // NEW: Input Passport, National ID, Grad Date
   | 'verifying' // NEW: Loading spinner status panel
   | 'wallet'
   | 'offer'
@@ -13,6 +18,7 @@ export type Screen =
   | 'receipt'
   | 'history'
   | 'settings'
+;
 
 export type ShareFields = {
   degree: boolean;

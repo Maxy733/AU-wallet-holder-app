@@ -1,10 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { PrimaryButton } from '../components';
+import { PrimaryButton, SecondaryButton } from '../components';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 
-export function WelcomeScreen({ onSignIn }: { onSignIn: () => void }) {
+export function WelcomeScreen({
+  onRegister,
+  onLogin,
+}: {
+  onRegister: () => void;
+  onLogin: () => void;
+}) {
   return (
     <View style={themeStyles.screen}>
       <View style={styles.logoGlow} />
@@ -19,8 +25,9 @@ export function WelcomeScreen({ onSignIn }: { onSignIn: () => void }) {
         </Text>
       </View>
       <View style={styles.loginPanel}>
-        <Text style={styles.panelHeading}>Continue as student</Text>
-        <PrimaryButton label="Sign in with AU Account" onPress={onSignIn} />
+        <Text style={styles.panelHeading}>Student or alumni</Text>
+        <PrimaryButton label="Create account" onPress={onRegister} />
+        <SecondaryButton label="Log in" onPress={onLogin} />
       </View>
     </View>
   );
@@ -79,7 +86,7 @@ const styles = StyleSheet.create({
     marginTop: 100,
     marginHorizontal: 20,
     padding: 20,
-    height: 140,
+    minHeight: 184,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.border,
@@ -90,6 +97,7 @@ const styles = StyleSheet.create({
     shadowRadius: 30,
     elevation: 6,
     justifyContent: 'space-between',
+    gap: 10,
   },
   panelHeading: {
     color: colors.ink,

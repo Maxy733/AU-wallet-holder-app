@@ -11,3 +11,4 @@ export * from './PrimaryButton';
 export * from './SecondaryButton';
 export * from './FieldSwitch';
 export * from './SettingRow';
+export * from './SecureTextInput';
