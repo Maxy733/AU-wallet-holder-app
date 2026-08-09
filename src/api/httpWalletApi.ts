@@ -43,7 +43,7 @@ export class HttpWalletApi implements WalletBackendApi {
   constructor(private readonly baseUrl: string) {}
 
   private async setSession(session: AuthSession) {
-    await saveApiSession({
+    await saveApiSession('live', {
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
       expiresAt: session.expiresAt,
@@ -59,12 +59,12 @@ export class HttpWalletApi implements WalletBackendApi {
     this.refreshToken = null;
     this.expiresAt = null;
     this.sessionLoaded = true;
-    await clearApiSession();
+    await clearApiSession('live');
   }
 
   private async loadSession() {
     if (this.sessionLoaded) return;
-    const stored = await readApiSession();
+    const stored = await readApiSession('live');
     this.accessToken = stored?.accessToken ?? null;
     this.refreshToken = stored?.refreshToken ?? null;
     this.expiresAt = stored?.expiresAt ?? null;
@@ -174,7 +174,11 @@ export class HttpWalletApi implements WalletBackendApi {
       return session;
     } catch (error) {
       await this.clearSession();
-      notifySessionInvalidated('REFRESH_TOKEN_INVALID_OR_EXPIRED');
+      notifySessionInvalidated(
+        error instanceof BackendApiError && error.code === 'ACCOUNT_DISABLED'
+          ? 'ACCOUNT_DISABLED'
+          : 'REFRESH_TOKEN_INVALID_OR_EXPIRED',
+      );
       throw error;
     }
   }
@@ -210,10 +214,24 @@ export class HttpWalletApi implements WalletBackendApi {
   }
 
   submitOnboarding(input: OnboardingSubmission) {
+    if (input.nationality === 'thai') {
+      throw new BackendApiError(
+        'THAI_NATIONAL_ID_MOCK_ONLY',
+        'Thai national ID verification is available only in the mock trusted-service flow.',
+        400,
+      );
+    }
+    if (!input.passportNumber) {
+      throw new BackendApiError('PASSPORT_REQUIRED', 'Passport number is required for foreigner verification.', 400);
+    }
     return this.request<OnboardingRequest>('/onboarding-verification/requests', {
       method: 'POST',
       authenticated: true,
-      body: input,
+      body: {
+        admissionNo: input.admissionNo,
+        dateOfBirth: input.dateOfBirth,
+        passportNumber: input.passportNumber,
+      },
     });
   }
 

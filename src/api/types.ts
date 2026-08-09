@@ -1,4 +1,4 @@
-export type AccountStatus = 'pending' | 'active';
+export type AccountStatus = 'pending' | 'active' | 'rejected' | 'suspended';
 export type VerificationStatus = 'under_review' | 'matched' | 'rejected';
 
 export type RegistrationInput = {
@@ -59,10 +59,14 @@ export type HolderAccount = {
   updatedAt: string;
 };
 
+export type ApplicantNationality = 'thai' | 'foreigner';
+
 export type OnboardingSubmission = {
   admissionNo: string;
   dateOfBirth: string;
-  passportNumber: string;
+  nationality: ApplicantNationality;
+  passportNumber?: string;
+  thaiNationalId?: string;
 };
 
 export type OnboardingRequest = {

@@ -1,5 +1,12 @@
 import { BackendApiError } from './httpWalletApi';
 
+const SAFE_VALIDATION_MESSAGE = 'Please check the information you entered.';
+
+export function backendErrorMessage(error: unknown, fallback: string) {
+  if (!(error instanceof BackendApiError)) return fallback;
+  return error.code === 'VALIDATION_ERROR' ? SAFE_VALIDATION_MESSAGE : error.message;
+}
+
 export function registrationErrorMessage(error: unknown) {
   if (!(error instanceof BackendApiError)) return 'Registration is temporarily unavailable.';
 
@@ -8,6 +15,8 @@ export function registrationErrorMessage(error: unknown) {
       return 'An account already exists for this email. Confirm the email if needed, then log in.';
     case 'REGISTRATION_FAILED':
       return 'We could not create your account. Please check the details and try again.';
+    case 'VALIDATION_ERROR':
+      return SAFE_VALIDATION_MESSAGE;
     default:
       return error.message;
   }
@@ -23,6 +32,8 @@ export function loginErrorMessage(error: unknown) {
       return 'The email or password is incorrect.';
     case 'ACCOUNT_DISABLED':
       return 'This account is currently unavailable. Contact the wallet support team.';
+    case 'VALIDATION_ERROR':
+      return SAFE_VALIDATION_MESSAGE;
     default:
       return error.message;
   }

@@ -13,7 +13,7 @@ export function RegistrationScreen({
   onRegistered,
 }: {
   onBack: () => void;
-  onRegistered: (email: string) => void;
+  onRegistered: (account: { email: string; firstName: string; lastName: string }) => void;
 }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -50,7 +50,11 @@ export function RegistrationScreen({
         password,
       });
       setPassword('');
-      onRegistered(email);
+      onRegistered({
+        email,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
     } catch (error) {
       setErrorMessage(registrationErrorMessage(error));
     } finally {

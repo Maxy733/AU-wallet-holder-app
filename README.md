@@ -94,6 +94,8 @@ EXPO_PUBLIC_API_BASE_URL=http://localhost:3000
 
 Mock mode is enabled unless `EXPO_PUBLIC_USE_MOCK_API=false`. When live integration is approved, set the API URL to an address reachable by the test device:
 
+With `EXPO_PUBLIC_USE_MOCK_API=true`, registration, login, trusted-service verification and holder activation stay inside the device mock. The wallet does not call the NestJS backend or Supabase.
+
 - Same-computer web testing: `http://localhost:3000`
 - Android emulator: `http://10.0.2.2:3000`
 - Physical phone: the computer's current LAN address, for example `http://192.168.1.9:3000`
@@ -124,6 +126,23 @@ If SecureStore is unavailable, such as in a browser preview, mock tokens and the
 After onboarding reports `matched`, the wallet calls `GET /holder-accounts/me` again and requires an `active` account with `confirmedAt` set before enabling device-local wallet PIN creation. The PIN is never sent to the backend.
 
 ### Registration and onboarding flow
+
+Current mock personal-wallet flow:
+
+```text
+Register with a personal email
+-> return and log in through the mock account flow
+-> see an empty wallet with no pending credential requests
+-> choose Assumption University from Trusted Services
+-> select Thai Nationality or Foreigner
+-> submit admission number, date of birth and Thai national ID or passport number
+-> simulate an under-review decision as matched or rejected
+-> matched enables wallet PIN setup and wallet features
+```
+
+The other three trusted-service entries are visible mock providers only. Selecting one displays a notice and does not exchange any data. After Assumption University is connected, these mock providers are collapsed under **See more services**.
+
+Live backend flow when mock mode is disabled:
 
 ```text
 Register with personal email

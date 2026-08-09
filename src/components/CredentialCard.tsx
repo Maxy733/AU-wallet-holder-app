@@ -5,7 +5,13 @@ import { colors } from '../theme/constants';
 import { copy } from '../theme/mockData';
 import { styles as themeStyles } from '../theme/styles'; // <-- Import your centralized styles
 
-export function CredentialCard({ compact = false }: { compact?: boolean }) {
+export function CredentialCard({
+  compact = false,
+  holderName = 'Wallet holder',
+}: {
+  compact?: boolean;
+  holderName?: string;
+}) {
   return (
     <LinearGradient
       colors={[colors.red, colors.redMid, colors.redDark]}
@@ -31,7 +37,7 @@ export function CredentialCard({ compact = false }: { compact?: boolean }) {
       <View style={themeStyles.cardMetaRow}>
         <View>
           <Text style={themeStyles.cardMetaLabel}>{compact ? 'Holder' : 'Issued by'}</Text>
-          <Text style={themeStyles.cardMetaValue}>{compact ? copy.studentDetail : 'Assumption University'}</Text>
+          <Text style={themeStyles.cardMetaValue}>{compact ? holderName : 'Assumption University'}</Text>
         </View>
         <View style={themeStyles.cardMetaRight}>
           <Text style={themeStyles.cardMetaLabel}>{compact ? 'GPA' : 'Graduated'}</Text>

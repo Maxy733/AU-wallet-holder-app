@@ -5,6 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   AuthMe,
   BackendApiError,
+  HolderAccount,
   isSessionError,
   OnboardingRequest,
   sessionErrorMessage,
@@ -25,6 +26,7 @@ import { ReceiptScreen } from './src/screens/ReceiptScreen';
 import { RegistrationScreen } from './src/screens/RegistrationScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { ShareScreen } from './src/screens/ShareScreen';
+import { TrustedServicesScreen } from './src/screens/TrustedServicesScreen';
 import { UnlockPinScreen } from './src/screens/UnlockPinScreen';
 import { VerificationScreen } from './src/screens/VerificationScreen';
 import { VerifyingScreen } from './src/screens/VerifyingScreen';
@@ -37,12 +39,13 @@ import type { HistoryEvent, Screen } from './src/types';
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
   const [authEmail, setAuthEmail] = useState('');
+  const [holderProfile, setHolderProfile] = useState({ firstName: '', lastName: '', studentId: '' });
   const [currentUser, setCurrentUser] = useState<AuthMe | null>(null);
   const [onboardingRequest, setOnboardingRequest] = useState<OnboardingRequest | null>(null);
   const [pinPurpose, setPinPurpose] = useState<'wallet' | 'share'>('wallet');
   const [setupError, setSetupError] = useState<string | null>(null);
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
-  const [holderActive, setHolderActive] = useState(false);
+  const [holderAccount, setHolderAccount] = useState<HolderAccount | null>(null);
   const [hasCredential, setHasCredential] = useState(false);
   const [shareFields, setShareFields] = useState({
     degree: true,
@@ -64,15 +67,21 @@ export default function App() {
       }
 
       setCurrentUser(me);
-      setHolderActive(holder.accountStatus === 'active' && Boolean(holder.confirmedAt));
+      setHolderAccount(holder);
       const request = await walletApi.getMyOnboardingRequest();
       setOnboardingRequest(request);
-      setScreen(request ? 'onboarding_status' : 'identity_submission');
+      if (request?.verificationStatus === 'matched' && holder.accountStatus === 'active' && holder.confirmedAt) {
+        const pinExists = await hasWalletPin(me.authUserId);
+        setPinPurpose('wallet');
+        setScreen(pinExists ? 'unlock_pin' : 'create_pin');
+      } else {
+        setScreen('wallet');
+      }
     } catch (error) {
       if (isSessionError(error)) {
         setCurrentUser(null);
         setOnboardingRequest(null);
-        setHolderActive(false);
+        setHolderAccount(null);
         setLoginNotice(sessionErrorMessage(error instanceof BackendApiError ? error.code : 'AUTHENTICATION_REQUIRED'));
         setScreen('login');
         return;
@@ -83,7 +92,9 @@ export default function App() {
   }, []);
 
   const refreshOnboarding = useCallback(async () => {
+    const holder = await walletApi.getHolderAccount();
     const request = await walletApi.getMyOnboardingRequest();
+    setHolderAccount(holder);
     setOnboardingRequest(request);
     setScreen(request ? 'onboarding_status' : 'identity_submission');
   }, []);
@@ -94,15 +105,14 @@ export default function App() {
     setSetupError(null);
     try {
       const holder = await walletApi.getHolderAccount();
+      setHolderAccount(holder);
       if (holder.accountStatus !== 'active' || !holder.confirmedAt) {
-        setHolderActive(false);
         throw new BackendApiError(
           'HOLDER_NOT_ACTIVE',
           'Issuer approval is recorded, but the holder account is not active yet. Refresh and try again.',
           409,
         );
       }
-      setHolderActive(true);
       const pinExists = await hasWalletPin(currentUser.authUserId);
       setPinPurpose('wallet');
       setScreen(pinExists ? 'unlock_pin' : 'create_pin');
@@ -126,8 +136,9 @@ export default function App() {
     } finally {
       setCurrentUser(null);
       setOnboardingRequest(null);
-      setHolderActive(false);
+      setHolderAccount(null);
       setHasCredential(false);
+      setHolderProfile({ firstName: '', lastName: '', studentId: '' });
       setHistory([]);
       setScreen('welcome');
     }
@@ -139,8 +150,9 @@ export default function App() {
       if (!active) return;
       setCurrentUser(null);
       setOnboardingRequest(null);
-      setHolderActive(false);
+      setHolderAccount(null);
       setHasCredential(false);
+      setHolderProfile({ firstName: '', lastName: '', studentId: '' });
       setHistory([]);
       setLoginNotice(sessionErrorMessage(reason));
       setScreen('login');
@@ -182,7 +194,15 @@ export default function App() {
     return () => clearTimeout(verificationTimer);
   }, [screen]);
 
-  const showNav = ['wallet', 'history', 'settings', 'success'].includes(screen);
+  const walletEnabled = holderAccount?.accountStatus === 'active' && Boolean(holderAccount.confirmedAt);
+  const connectionStatus = onboardingRequest?.verificationStatus ?? 'not_connected';
+  const holderName = [holderProfile.firstName, holderProfile.lastName].filter(Boolean).join(' ') || 'Wallet holder';
+  const studentId = holderProfile.studentId || 'Pending verification';
+  const showNav = walletEnabled && ['wallet', 'history', 'settings', 'success'].includes(screen);
+
+  const openAssumptionConnection = () => {
+    setScreen(onboardingRequest ? 'onboarding_status' : 'identity_submission');
+  };
 
   const goFromWallet = (nextScreen: Screen) => {
     if (nextScreen === 'share') {
@@ -218,30 +238,45 @@ export default function App() {
       case 'welcome':
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
       case 'registration':
-        return <RegistrationScreen onBack={() => setScreen('welcome')} onRegistered={(email) => { setAuthEmail(email); setScreen('check_email'); }} />;
+        return (
+          <RegistrationScreen
+            onBack={() => setScreen('welcome')}
+            onRegistered={({ email, firstName, lastName }) => {
+              setAuthEmail(email);
+              setHolderProfile({ firstName, lastName, studentId: '' });
+              setScreen('check_email');
+            }}
+          />
+        );
       case 'check_email':
         return <CheckEmailScreen email={authEmail} onReturnToLogin={() => setScreen('login')} />;
       case 'login':
         return <LoginScreen initialEmail={authEmail} initialError={loginNotice} onBack={() => { setLoginNotice(null); setScreen('welcome'); }} onLoggedIn={() => { setLoginNotice(null); void loadHolderState(); }} onRegister={() => setScreen('registration')} />;
       case 'identity_submission':
-        return <IdentitySubmissionScreen onSubmitted={(request) => { setOnboardingRequest(request); setScreen('onboarding_status'); }} onSignOut={() => void signOut()} />;
+        return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => ({ ...profile, studentId: submittedStudentId })); setOnboardingRequest(request); setScreen('onboarding_status'); }} onBack={() => setScreen('wallet')} />;
       case 'onboarding_status':
-        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request) => { setOnboardingRequest(request); setScreen('onboarding_status'); }} onSignOut={() => void signOut()} />;
+        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => ({ ...profile, studentId: submittedStudentId })); setOnboardingRequest(request); setScreen('onboarding_status'); }} onBack={() => setScreen('wallet')} />;
         return (
           <OnboardingStatusScreen
             request={onboardingRequest}
+            holderAccount={holderAccount}
             onRequestChange={setOnboardingRequest}
             onRefresh={refreshOnboarding}
             onContinue={() => void continueAfterMatch()}
             onCorrect={() => setScreen('identity_submission')}
-            onSignOut={() => void signOut()}
+            onBackToWallet={() => setScreen('wallet')}
           />
         );
       case 'create_pin':
         return (
           <CreatePinScreen
             onComplete={async (pin) => {
-              if (!currentUser || onboardingRequest?.verificationStatus !== 'matched' || !holderActive) {
+              if (
+                !currentUser ||
+                onboardingRequest?.verificationStatus !== 'matched' ||
+                holderAccount?.accountStatus !== 'active' ||
+                !holderAccount.confirmedAt
+              ) {
                 throw new Error('Issuer approval is required before wallet PIN setup.');
               }
               await saveWalletPin(currentUser.authUserId, pin);
@@ -260,15 +295,37 @@ export default function App() {
           />
         );
       case 'wallet':
-        return <WalletScreen go={goFromWallet} hasCredential={hasCredential} />;
+        return (
+          <WalletScreen
+            go={goFromWallet}
+            hasCredential={hasCredential}
+            walletEnabled={walletEnabled}
+            connectionStatus={connectionStatus}
+            onConnectAssumption={openAssumptionConnection}
+            onSignOut={() => void signOut()}
+            holderName={holderName}
+          />
+        );
+      case 'trusted_services':
+        return <TrustedServicesScreen onBack={() => setScreen('wallet')} />;
       case 'offer':
-        return <OfferScreen go={setScreen} />;
+        return <OfferScreen go={setScreen} holderName={holderName} />;
       case 'verifying':
         return <VerifyingScreen go={setScreen} />;
       case 'success':
-        return <WalletScreen go={goFromWallet} hasCredential={hasCredential} />;
+        return (
+          <WalletScreen
+            go={goFromWallet}
+            hasCredential={hasCredential}
+            walletEnabled={walletEnabled}
+            connectionStatus={connectionStatus}
+            onConnectAssumption={openAssumptionConnection}
+            onSignOut={() => void signOut()}
+            holderName={holderName}
+          />
+        );
       case 'credential':
-        return <CredentialScreen go={setScreen} />;
+        return <CredentialScreen go={setScreen} holderName={holderName} studentId={studentId} />;
       case 'share':
         return (
           <ShareScreen
@@ -297,11 +354,11 @@ export default function App() {
       case 'history':
         return <HistoryScreen go={setScreen} history={history} />;
       case 'settings':
-        return <SettingsScreen go={setScreen} onSignOut={() => void signOut()} />;
+        return <SettingsScreen go={setScreen} onSignOut={() => void signOut()} holderName={holderName} studentId={studentId} />;
       default:
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
     }
-  }, [authEmail, continueAfterMatch, currentUser, hasCredential, history, holderActive, loadHolderState, loginNotice, onboardingRequest, pinPurpose, refreshOnboarding, screen, setupError, shareFields, signOut]);
+  }, [authEmail, connectionStatus, continueAfterMatch, currentUser, hasCredential, history, holderAccount, holderName, loadHolderState, loginNotice, onboardingRequest, pinPurpose, refreshOnboarding, screen, setupError, shareFields, signOut, studentId, walletEnabled]);
 
   return (
     <SafeAreaProvider>

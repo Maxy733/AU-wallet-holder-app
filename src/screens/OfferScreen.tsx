@@ -5,7 +5,7 @@ import { copy } from '../theme/mockData';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
 
-export function OfferScreen({ go }: { go: (screen: Screen) => void }) {
+export function OfferScreen({ go, holderName }: { go: (screen: Screen) => void; holderName: string }) {
   return (
     <View style={themeStyles.screen}>
       <BackHeader title="New credential offer" subtitle="From AU Registrar" onBack={() => go('wallet')} />
@@ -14,7 +14,7 @@ export function OfferScreen({ go }: { go: (screen: Screen) => void }) {
         <InfoPanel
           title="Preview"
           rows={[
-            ['Name', copy.student],
+            ['Name', holderName],
             ['Degree', copy.degree],
             ['Major', copy.major],
             ['Graduation date', copy.graduationISO],

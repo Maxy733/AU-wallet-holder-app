@@ -10,6 +10,7 @@ export type Screen =
   | 'create_pin' // NEW: Setup 6-digit passcode
   | 'verifying' // NEW: Loading spinner status panel
   | 'wallet'
+  | 'trusted_services'
   | 'offer'
   | 'success'
   | 'credential'

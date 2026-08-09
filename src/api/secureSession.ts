@@ -1,7 +1,18 @@
 import * as SecureStore from 'expo-secure-store';
 
-const SESSION_KEY = 'auwallet.backend.session.v1';
-let memoryOnlySession: StoredApiSession | null = null;
+const LEGACY_SESSION_KEY = 'auwallet.backend.session.v1';
+const SESSION_KEYS = {
+  mock: 'wallet_session_mock',
+  live: 'wallet_session_live',
+} as const;
+
+export type SessionStorageScope = keyof typeof SESSION_KEYS;
+
+const memoryOnlySessions: Record<SessionStorageScope, StoredApiSession | null> = {
+  mock: null,
+  live: null,
+};
+let legacySessionCleared = false;
 
 export type StoredApiSession = {
   accessToken: string;
@@ -9,19 +20,27 @@ export type StoredApiSession = {
   expiresAt: number;
 };
 
-export async function saveApiSession(session: StoredApiSession) {
+async function clearLegacySession() {
+  if (legacySessionCleared || !(await SecureStore.isAvailableAsync())) return;
+  await SecureStore.deleteItemAsync(LEGACY_SESSION_KEY);
+  legacySessionCleared = true;
+}
+
+export async function saveApiSession(scope: SessionStorageScope, session: StoredApiSession) {
   if (!(await SecureStore.isAvailableAsync())) {
-    memoryOnlySession = session;
+    memoryOnlySessions[scope] = session;
     return;
   }
-  await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(session), {
+  await clearLegacySession();
+  await SecureStore.setItemAsync(SESSION_KEYS[scope], JSON.stringify(session), {
     keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
   });
 }
 
-export async function readApiSession(): Promise<StoredApiSession | null> {
-  if (!(await SecureStore.isAvailableAsync())) return memoryOnlySession;
-  const serialized = await SecureStore.getItemAsync(SESSION_KEY);
+export async function readApiSession(scope: SessionStorageScope): Promise<StoredApiSession | null> {
+  if (!(await SecureStore.isAvailableAsync())) return memoryOnlySessions[scope];
+  await clearLegacySession();
+  const serialized = await SecureStore.getItemAsync(SESSION_KEYS[scope]);
   if (!serialized) return null;
 
   try {
@@ -31,18 +50,19 @@ export async function readApiSession(): Promise<StoredApiSession | null> {
       typeof parsed.refreshToken !== 'string' ||
       typeof parsed.expiresAt !== 'number'
     ) {
-      await clearApiSession();
+      await clearApiSession(scope);
       return null;
     }
     return parsed as StoredApiSession;
   } catch {
-    await clearApiSession();
+    await clearApiSession(scope);
     return null;
   }
 }
 
-export async function clearApiSession() {
-  memoryOnlySession = null;
+export async function clearApiSession(scope: SessionStorageScope) {
+  memoryOnlySessions[scope] = null;
   if (!(await SecureStore.isAvailableAsync())) return;
-  await SecureStore.deleteItemAsync(SESSION_KEY);
+  await clearLegacySession();
+  await SecureStore.deleteItemAsync(SESSION_KEYS[scope]);
 }

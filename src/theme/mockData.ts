@@ -1,7 +1,4 @@
 export const copy = {
-  student: 'Erik Criston',
-  studentDetail: 'Erik Christina',
-  id: '6412345',
   degree: 'Bachelor of Science',
   major: 'Computer Science',
   majorFull: 'Computer Science · Distinction',

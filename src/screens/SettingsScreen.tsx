@@ -8,19 +8,30 @@ import { Screen } from '../types';
 export function SettingsScreen({
   go,
   onSignOut,
+  holderName,
+  studentId,
 }: {
   go: (screen: Screen) => void;
   onSignOut: () => void;
+  holderName: string;
+  studentId: string;
 }) {
+  const initials = holderName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'AU';
+
   return (
     <View style={themeStyles.screen}>
       <Header eyebrow="Account" title="Settings" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.scrollBottom}>
         <View style={styles.profileCard}>
-          <View style={styles.profileAvatar}><Text style={styles.avatarText}>EC</Text></View>
+          <View style={styles.profileAvatar}><Text style={styles.avatarText}>{initials}</Text></View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Eric Criston</Text>
-            <Text style={styles.profileMeta}>Student ID 6412345</Text>
+            <Text style={styles.profileName}>{holderName}</Text>
+            <Text style={styles.profileMeta}>Student ID {studentId}</Text>
           </View>
           <Text style={styles.schoolText}>Vicent Mary School of Engineering, Science and Technology</Text>
         </View>

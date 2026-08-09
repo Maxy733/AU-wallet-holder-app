@@ -14,6 +14,7 @@ export const walletApi = isMockApi
 
 export { BackendApiError } from './httpWalletApi';
 export {
+  backendErrorMessage,
   isSessionError,
   loginErrorMessage,
   registrationErrorMessage,

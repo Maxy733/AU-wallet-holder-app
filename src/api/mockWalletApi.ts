@@ -17,9 +17,17 @@ import type {
 
 const now = () => new Date().toISOString();
 const wait = () => new Promise<void>((resolve) => setTimeout(resolve, 350));
+const mockAuthIdForEmail = async (email: string) => {
+  const digest = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    email.trim().toLowerCase(),
+  );
+  return `mock-auth-${digest.slice(0, 16)}`;
+};
 
 class MockWalletApi implements WalletBackendApi {
   private email = 'student@example.com';
+  private authUserId = 'mock-auth-default';
   private authenticated = false;
   private sessionLoaded = false;
   private accountStatus: 'pending' | 'active' = 'pending';
@@ -33,7 +41,7 @@ class MockWalletApi implements WalletBackendApi {
   }
 
   async hasStoredSession() {
-    const stored = await readApiSession();
+    const stored = await readApiSession('mock');
     this.authenticated = Boolean(stored?.accessToken && stored.refreshToken);
     this.sessionLoaded = true;
     return this.authenticated;
@@ -42,13 +50,14 @@ class MockWalletApi implements WalletBackendApi {
   async register(input: RegistrationInput): Promise<RegistrationResult> {
     await wait();
     this.email = input.personalEmail.trim().toLowerCase();
+    this.authUserId = await mockAuthIdForEmail(this.email);
     this.authenticated = false;
     this.sessionLoaded = true;
     this.accountStatus = 'pending';
     this.onboarding = null;
-    await clearApiSession();
+    await clearApiSession('mock');
     return {
-      authUserId: 'mock-auth-user-id',
+      authUserId: this.authUserId,
       holderAccountId: 12,
       email: this.email,
       role: 'student',
@@ -63,6 +72,7 @@ class MockWalletApi implements WalletBackendApi {
   async login(input: LoginInput): Promise<AuthSession> {
     await wait();
     this.email = input.email.trim().toLowerCase();
+    this.authUserId = await mockAuthIdForEmail(this.email);
     const session = this.session();
     await this.persistSession(session);
     this.authenticated = true;
@@ -82,14 +92,14 @@ class MockWalletApi implements WalletBackendApi {
     await wait();
     this.authenticated = false;
     this.sessionLoaded = true;
-    await clearApiSession();
+    await clearApiSession('mock');
   }
 
   async getAuthMe(): Promise<AuthMe> {
     await wait();
     await this.requireAuthentication();
     return {
-      authUserId: 'mock-auth-user-id',
+      authUserId: this.authUserId,
       holderAccountId: 12,
       email: this.email,
       role: 'student',
@@ -103,7 +113,7 @@ class MockWalletApi implements WalletBackendApi {
     const timestamp = now();
     return {
       holderAccountId: 12,
-      authUserId: 'mock-auth-user-id',
+      authUserId: this.authUserId,
       universityEmail: null,
       personalEmail: this.email,
       accountStatus: this.accountStatus,
@@ -117,8 +127,13 @@ class MockWalletApi implements WalletBackendApi {
     await wait();
     await this.requireAuthentication();
 
-    // Do not retain or log input.passportNumber. The real backend normalizes and
-    // HMACs it inside trusted server code; this mock discards it after this call.
+    const documentNumber = input.nationality === 'thai' ? input.thaiNationalId : input.passportNumber;
+    if (!documentNumber?.trim()) {
+      throw new BackendApiError('IDENTITY_DOCUMENT_REQUIRED', 'A verification document number is required.', 400);
+    }
+
+    // Do not retain or log the passport or Thai national ID. This mock checks
+    // only that a value was supplied and discards it immediately after the call.
     const rejected = input.admissionNo.trim().toUpperCase().startsWith('REJECT');
     this.onboarding = {
       onboardingRequestId: Date.now(),
@@ -158,7 +173,7 @@ class MockWalletApi implements WalletBackendApi {
       refreshToken: `mock-refresh-${Crypto.randomUUID()}`,
       expiresAt: Math.floor(Date.now() / 1000) + 3600,
       user: {
-        authUserId: 'mock-auth-user-id',
+        authUserId: this.authUserId,
         holderAccountId: 12,
         email: this.email,
         role: 'student',
@@ -168,7 +183,7 @@ class MockWalletApi implements WalletBackendApi {
   }
 
   private async persistSession(session: AuthSession) {
-    await saveApiSession({
+    await saveApiSession('mock', {
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
       expiresAt: session.expiresAt,

@@ -9,6 +9,13 @@ type HeaderProps = {
 };
 
 export function Header({ eyebrow, title, showAvatar = true }: HeaderProps) {
+  const avatarInitials = title
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+
   return (
     <View style={themeStyles.header}>
       <View>
@@ -17,7 +24,7 @@ export function Header({ eyebrow, title, showAvatar = true }: HeaderProps) {
       </View>
       {showAvatar && title.includes(' ') && (
         <View style={themeStyles.avatar}>
-          <Text style={themeStyles.avatarText}>EC</Text>
+          <Text style={themeStyles.avatarText}>{avatarInitials}</Text>
         </View>
       )}
     </View>
