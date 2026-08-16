@@ -14,7 +14,7 @@ export function RegistrationScreen({
   onReturnToLogin,
 }: {
   onBack: () => void;
-  onRegistered: (account: { authUserId: string; email: string; firstName: string; lastName: string }) => void;
+  onRegistered: (account: { authUserId: string; email: string; firstName: string; lastName: string }) => Promise<void> | void;
   onReturnToLogin: (email: string) => void;
 }) {
   const [firstName, setFirstName] = useState('');
@@ -54,7 +54,7 @@ export function RegistrationScreen({
         password,
       });
       setPassword('');
-      onRegistered({
+      await onRegistered({
         authUserId: registeredAccount.authUserId,
         email,
         firstName: firstName.trim(),

@@ -10,6 +10,15 @@ const emptyIdentity: HolderIdentity = { firstName: '', lastName: '', studentId: 
 const memoryOnlyIdentities = new Map<string, HolderIdentity>();
 const identityKey = (userId: string) => `auwallet.identity.${userId}`;
 
+function stableEmailKey(email: string) {
+  let hash = 2166136261;
+  for (const character of email.trim().toLowerCase()) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `auwallet.identity.email.${(hash >>> 0).toString(16)}`;
+}
+
 function normalizeIdentity(value: unknown): HolderIdentity {
   if (!value || typeof value !== 'object') return { ...emptyIdentity };
   const candidate = value as Partial<HolderIdentity>;
@@ -20,25 +29,40 @@ function normalizeIdentity(value: unknown): HolderIdentity {
   };
 }
 
-export async function loadHolderIdentity(userId: string): Promise<HolderIdentity> {
+async function readIdentity(key: string): Promise<HolderIdentity | null> {
   if (!(await SecureStore.isAvailableAsync())) {
-    return memoryOnlyIdentities.get(identityKey(userId)) ?? { ...emptyIdentity };
+    return memoryOnlyIdentities.get(key) ?? null;
   }
 
-  const serialized = await SecureStore.getItemAsync(identityKey(userId));
-  if (!serialized) return { ...emptyIdentity };
+  const serialized = await SecureStore.getItemAsync(key);
+  if (!serialized) return null;
   try {
     return normalizeIdentity(JSON.parse(serialized));
   } catch {
-    return { ...emptyIdentity };
+    return null;
   }
 }
 
-export async function saveHolderIdentity(userId: string, identity: HolderIdentity) {
-  const normalized = normalizeIdentity(identity);
-  memoryOnlyIdentities.set(identityKey(userId), normalized);
+export async function loadHolderIdentity(userId: string, email?: string): Promise<HolderIdentity> {
+  const byUserId = await readIdentity(identityKey(userId));
+  if (byUserId && (byUserId.firstName || byUserId.lastName || byUserId.studentId)) return byUserId;
+  if (email) {
+    const byEmail = await readIdentity(stableEmailKey(email));
+    if (byEmail && (byEmail.firstName || byEmail.lastName || byEmail.studentId)) return byEmail;
+  }
+  return byUserId ?? { ...emptyIdentity };
+}
+
+async function writeIdentity(key: string, identity: HolderIdentity) {
+  memoryOnlyIdentities.set(key, identity);
   if (!(await SecureStore.isAvailableAsync())) return;
-  await SecureStore.setItemAsync(identityKey(userId), JSON.stringify(normalized), {
+  await SecureStore.setItemAsync(key, JSON.stringify(identity), {
     keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
   });
+}
+
+export async function saveHolderIdentity(userId: string, identity: HolderIdentity, email?: string) {
+  const normalized = normalizeIdentity(identity);
+  await writeIdentity(identityKey(userId), normalized);
+  if (email) await writeIdentity(stableEmailKey(email), normalized);
 }

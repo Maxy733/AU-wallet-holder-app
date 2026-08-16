@@ -29,6 +29,8 @@ const mockAuthIdForEmail = async (email: string) => {
 class MockWalletApi implements WalletBackendApi {
   private email = 'student@example.com';
   private authUserId = 'mock-auth-default';
+  private firstName = '';
+  private lastName = '';
   private authenticated = false;
   private sessionLoaded = false;
   private accountStatus: 'pending' | 'active' = 'pending';
@@ -52,6 +54,8 @@ class MockWalletApi implements WalletBackendApi {
     await wait();
     this.email = input.personalEmail.trim().toLowerCase();
     this.authUserId = await mockAuthIdForEmail(this.email);
+    this.firstName = input.firstName.trim();
+    this.lastName = input.lastName.trim();
     this.authenticated = false;
     this.sessionLoaded = true;
     this.accountStatus = 'pending';
@@ -105,6 +109,8 @@ class MockWalletApi implements WalletBackendApi {
       email: this.email,
       role: 'student',
       accountStatus: this.accountStatus,
+      firstName: this.firstName,
+      lastName: this.lastName,
     };
   }
 
@@ -121,6 +127,8 @@ class MockWalletApi implements WalletBackendApi {
       confirmedAt: this.accountStatus === 'active' ? timestamp : null,
       createdAt: timestamp,
       updatedAt: timestamp,
+      firstName: this.firstName,
+      lastName: this.lastName,
     };
   }
 

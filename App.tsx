@@ -84,9 +84,9 @@ export default function App() {
     setSetupError(null);
     try {
       const me = await walletApi.getAuthMe();
-      const [holder, savedHolderIdentity, savedProfilePreferences] = await Promise.all([
+      const [holder, initiallySavedHolderIdentity, savedProfilePreferences] = await Promise.all([
         walletApi.getHolderAccount(),
-        loadHolderIdentity(me.authUserId).catch(() => ({ firstName: '', lastName: '', studentId: '' })),
+        loadHolderIdentity(me.authUserId, me.email).catch(() => ({ firstName: '', lastName: '', studentId: '' })),
         loadProfilePreferences(me.authUserId).catch(() => ({ nickname: '', photoUri: null })),
       ]);
       if (me.role !== 'student' || !me.holderAccountId) {
@@ -95,7 +95,24 @@ export default function App() {
 
       setCurrentUser(me);
       setHolderAccount(holder);
-      setHolderProfile(savedHolderIdentity);
+      const savedHolderIdentity = (
+        initiallySavedHolderIdentity.firstName ||
+        initiallySavedHolderIdentity.lastName ||
+        initiallySavedHolderIdentity.studentId ||
+        holder.authUserId === me.authUserId
+      )
+        ? initiallySavedHolderIdentity
+        : await loadHolderIdentity(holder.authUserId, me.email)
+          .catch(() => initiallySavedHolderIdentity);
+      const restoredHolderIdentity = {
+        firstName: holder.firstName?.trim() || me.firstName?.trim() || savedHolderIdentity.firstName,
+        lastName: holder.lastName?.trim() || me.lastName?.trim() || savedHolderIdentity.lastName,
+        studentId: savedHolderIdentity.studentId,
+      };
+      setHolderProfile(restoredHolderIdentity);
+      if (restoredHolderIdentity.firstName || restoredHolderIdentity.lastName || restoredHolderIdentity.studentId) {
+        await saveHolderIdentity(me.authUserId, restoredHolderIdentity, me.email).catch(() => undefined);
+      }
       setProfilePreferences(savedProfilePreferences);
       const request = await walletApi.getMyOnboardingRequest();
       setOnboardingRequest(request);
@@ -306,11 +323,11 @@ export default function App() {
               setAuthEmail(email);
               setScreen('login');
             }}
-            onRegistered={({ authUserId, email, firstName, lastName }) => {
+            onRegistered={async ({ authUserId, email, firstName, lastName }) => {
               setAuthEmail(email);
               const registeredIdentity = { firstName, lastName, studentId: '' };
               setHolderProfile(registeredIdentity);
-              void saveHolderIdentity(authUserId, registeredIdentity).catch(() => undefined);
+              await saveHolderIdentity(authUserId, registeredIdentity, email).catch(() => undefined);
               setScreen('check_email');
             }}
           />
@@ -320,9 +337,9 @@ export default function App() {
       case 'login':
         return <LoginScreen initialEmail={authEmail} initialError={loginNotice} onBack={() => { setLoginNotice(null); setScreen('welcome'); }} onLoggedIn={() => { setLoginNotice(null); void loadHolderState(); }} onRegister={() => setScreen('registration')} />;
       case 'identity_submission':
-        return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => { const nextProfile = { ...profile, studentId: submittedStudentId }; if (currentUser) void saveHolderIdentity(currentUser.authUserId, nextProfile).catch(() => undefined); return nextProfile; }); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
+        return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => { const nextProfile = { ...profile, studentId: submittedStudentId }; if (currentUser) void saveHolderIdentity(currentUser.authUserId, nextProfile, currentUser.email).catch(() => undefined); return nextProfile; }); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
       case 'onboarding_status':
-        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => { const nextProfile = { ...profile, studentId: submittedStudentId }; if (currentUser) void saveHolderIdentity(currentUser.authUserId, nextProfile).catch(() => undefined); return nextProfile; }); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
+        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => { const nextProfile = { ...profile, studentId: submittedStudentId }; if (currentUser) void saveHolderIdentity(currentUser.authUserId, nextProfile, currentUser.email).catch(() => undefined); return nextProfile; }); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
         return (
           <OnboardingStatusScreen
             request={onboardingRequest}
