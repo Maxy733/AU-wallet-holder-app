@@ -14,13 +14,17 @@ import {
   walletApi,
 } from './src/api';
 import { BottomNav, PrimaryButton } from './src/components';
+import { loadHolderIdentity, saveHolderIdentity } from './src/lib/holderIdentity';
+import { loadProfilePreferences, ProfilePreferences, saveProfilePreferences } from './src/lib/profilePreferences';
 import { hasWalletPin, saveWalletPin } from './src/lib/walletSecurity';
 import { CheckEmailScreen } from './src/screens/CheckEmailScreen';
 import CreatePinScreen from './src/screens/CreatePinScreen';
 import { CredentialScreen } from './src/screens/CredentialScreen';
+import { EditProfileScreen } from './src/screens/EditProfileScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { IdentitySubmissionScreen } from './src/screens/IdentitySubmissionScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { LinkedIssuerScreen } from './src/screens/LinkedIssuerScreen';
 import { OfferScreen } from './src/screens/OfferScreen';
 import { OnboardingStatusScreen } from './src/screens/OnboardingStatusScreen';
 import { ReceiptScreen } from './src/screens/ReceiptScreen';
@@ -41,6 +45,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
   const [authEmail, setAuthEmail] = useState('');
   const [holderProfile, setHolderProfile] = useState({ firstName: '', lastName: '', studentId: '' });
+  const [profilePreferences, setProfilePreferences] = useState<ProfilePreferences>({ nickname: '', photoUri: null });
   const [currentUser, setCurrentUser] = useState<AuthMe | null>(null);
   const [onboardingRequest, setOnboardingRequest] = useState<OnboardingRequest | null>(null);
   const [pinPurpose, setPinPurpose] = useState<'wallet' | 'share'>('wallet');
@@ -79,13 +84,19 @@ export default function App() {
     setSetupError(null);
     try {
       const me = await walletApi.getAuthMe();
-      const holder = await walletApi.getHolderAccount();
+      const [holder, savedHolderIdentity, savedProfilePreferences] = await Promise.all([
+        walletApi.getHolderAccount(),
+        loadHolderIdentity(me.authUserId).catch(() => ({ firstName: '', lastName: '', studentId: '' })),
+        loadProfilePreferences(me.authUserId).catch(() => ({ nickname: '', photoUri: null })),
+      ]);
       if (me.role !== 'student' || !me.holderAccountId) {
         throw new BackendApiError('FORBIDDEN', 'This account cannot use the holder wallet.', 403);
       }
 
       setCurrentUser(me);
       setHolderAccount(holder);
+      setHolderProfile(savedHolderIdentity);
+      setProfilePreferences(savedProfilePreferences);
       const request = await walletApi.getMyOnboardingRequest();
       setOnboardingRequest(request);
       await loadIssuerProviders();
@@ -163,6 +174,7 @@ export default function App() {
       setProvidersError(null);
       setHasCredential(false);
       setHolderProfile({ firstName: '', lastName: '', studentId: '' });
+      setProfilePreferences({ nickname: '', photoUri: null });
       setHistory([]);
       setScreen('welcome');
     }
@@ -179,6 +191,7 @@ export default function App() {
       setProvidersError(null);
       setHasCredential(false);
       setHolderProfile({ firstName: '', lastName: '', studentId: '' });
+      setProfilePreferences({ nickname: '', photoUri: null });
       setHistory([]);
       setLoginNotice(sessionErrorMessage(reason));
       setScreen('login');
@@ -221,7 +234,8 @@ export default function App() {
   }, [screen]);
 
   const walletEnabled = holderAccount?.accountStatus === 'active' && Boolean(holderAccount.confirmedAt);
-  const holderName = [holderProfile.firstName, holderProfile.lastName].filter(Boolean).join(' ') || 'Wallet holder';
+  const registeredName = [holderProfile.firstName, holderProfile.lastName].filter(Boolean).join(' ') || 'Wallet holder';
+  const displayName = profilePreferences.nickname || registeredName;
   const studentId = holderProfile.studentId || 'Pending verification';
   const showNav = walletEnabled && ['wallet', 'history', 'settings', 'success'].includes(screen);
 
@@ -251,14 +265,14 @@ export default function App() {
     });
   }, [loadIssuerProviders]);
 
-  const goFromWallet = (nextScreen: Screen) => {
+  const goWithShareProtection = useCallback((nextScreen: Screen) => {
     if (nextScreen === 'share') {
       setPinPurpose('share');
       setScreen('unlock_pin');
       return;
     }
     setScreen(nextScreen);
-  };
+  }, []);
 
   const content = useMemo(() => {
     if (screen === 'loading') {
@@ -292,9 +306,11 @@ export default function App() {
               setAuthEmail(email);
               setScreen('login');
             }}
-            onRegistered={({ email, firstName, lastName }) => {
+            onRegistered={({ authUserId, email, firstName, lastName }) => {
               setAuthEmail(email);
-              setHolderProfile({ firstName, lastName, studentId: '' });
+              const registeredIdentity = { firstName, lastName, studentId: '' };
+              setHolderProfile(registeredIdentity);
+              void saveHolderIdentity(authUserId, registeredIdentity).catch(() => undefined);
               setScreen('check_email');
             }}
           />
@@ -304,9 +320,9 @@ export default function App() {
       case 'login':
         return <LoginScreen initialEmail={authEmail} initialError={loginNotice} onBack={() => { setLoginNotice(null); setScreen('welcome'); }} onLoggedIn={() => { setLoginNotice(null); void loadHolderState(); }} onRegister={() => setScreen('registration')} />;
       case 'identity_submission':
-        return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => ({ ...profile, studentId: submittedStudentId })); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
+        return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => { const nextProfile = { ...profile, studentId: submittedStudentId }; if (currentUser) void saveHolderIdentity(currentUser.authUserId, nextProfile).catch(() => undefined); return nextProfile; }); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
       case 'onboarding_status':
-        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => ({ ...profile, studentId: submittedStudentId })); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
+        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => { const nextProfile = { ...profile, studentId: submittedStudentId }; if (currentUser) void saveHolderIdentity(currentUser.authUserId, nextProfile).catch(() => undefined); return nextProfile; }); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
         return (
           <OnboardingStatusScreen
             request={onboardingRequest}
@@ -348,7 +364,7 @@ export default function App() {
       case 'wallet':
         return (
           <WalletScreen
-            go={goFromWallet}
+            go={goWithShareProtection}
             hasCredential={hasCredential}
             walletEnabled={walletEnabled}
             issuerProviders={issuerProviders}
@@ -357,7 +373,8 @@ export default function App() {
             onRetryProviders={retryIssuerProviders}
             onSelectIssuer={selectIssuerProvider}
             onSignOut={() => void signOut()}
-            holderName={holderName}
+            holderName={displayName}
+            profilePhotoUri={profilePreferences.photoUri}
           />
         );
       case 'trusted_services':
@@ -372,13 +389,13 @@ export default function App() {
           />
         );
       case 'offer':
-        return <OfferScreen go={setScreen} holderName={holderName} />;
+        return <OfferScreen go={setScreen} holderName={registeredName} />;
       case 'verifying':
         return <VerifyingScreen go={setScreen} />;
       case 'success':
         return (
           <WalletScreen
-            go={goFromWallet}
+            go={goWithShareProtection}
             hasCredential={hasCredential}
             walletEnabled={walletEnabled}
             issuerProviders={issuerProviders}
@@ -387,11 +404,12 @@ export default function App() {
             onRetryProviders={retryIssuerProviders}
             onSelectIssuer={selectIssuerProvider}
             onSignOut={() => void signOut()}
-            holderName={holderName}
+            holderName={displayName}
+            profilePhotoUri={profilePreferences.photoUri}
           />
         );
       case 'credential':
-        return <CredentialScreen go={setScreen} holderName={holderName} studentId={studentId} />;
+        return <CredentialScreen go={goWithShareProtection} holderName={registeredName} studentId={studentId} />;
       case 'share':
         return (
           <ShareScreen
@@ -420,15 +438,50 @@ export default function App() {
       case 'history':
         return <HistoryScreen go={setScreen} history={history} />;
       case 'settings':
-        return <SettingsScreen go={setScreen} onSignOut={() => void signOut()} holderName={holderName} studentId={studentId} />;
+        return (
+          <SettingsScreen
+            go={setScreen}
+            onSignOut={() => void signOut()}
+            displayName={displayName}
+            studentId={studentId}
+            profilePhotoUri={profilePreferences.photoUri}
+          />
+        );
+      case 'edit_profile':
+        if (!currentUser) return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
+        return (
+          <EditProfileScreen
+            officialName={registeredName}
+            initialNickname={profilePreferences.nickname}
+            initialPhotoUri={profilePreferences.photoUri}
+            onBack={() => setScreen('settings')}
+            onSave={async (draft) => {
+              const savedPreferences = await saveProfilePreferences(currentUser.authUserId, draft);
+              setProfilePreferences(savedPreferences);
+              setScreen('settings');
+            }}
+          />
+        );
+      case 'linked_issuer':
+        return (
+          <LinkedIssuerScreen
+            officialName={registeredName}
+            studentId={studentId}
+            confirmedAt={holderAccount?.confirmedAt ?? null}
+            onBack={() => setScreen('settings')}
+          />
+        );
       default:
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
     }
-  }, [authEmail, continueAfterMatch, currentUser, hasCredential, history, holderAccount, holderName, issuerProviders, loadHolderState, loginNotice, onboardingRequest, pinPurpose, providersError, providersLoading, refreshOnboarding, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
+  }, [authEmail, continueAfterMatch, currentUser, displayName, goWithShareProtection, hasCredential, history, holderAccount, issuerProviders, loadHolderState, loginNotice, onboardingRequest, pinPurpose, profilePreferences, providersError, providersLoading, refreshOnboarding, registeredName, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.appShell}>
+      <SafeAreaView
+        style={styles.appShell}
+        edges={showNav ? ['top', 'right', 'left'] : ['top', 'right', 'bottom', 'left']}
+      >
         <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
         {content}
         {showNav ? (

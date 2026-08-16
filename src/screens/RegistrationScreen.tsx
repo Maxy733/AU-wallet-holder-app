@@ -14,7 +14,7 @@ export function RegistrationScreen({
   onReturnToLogin,
 }: {
   onBack: () => void;
-  onRegistered: (account: { email: string; firstName: string; lastName: string }) => void;
+  onRegistered: (account: { authUserId: string; email: string; firstName: string; lastName: string }) => void;
   onReturnToLogin: (email: string) => void;
 }) {
   const [firstName, setFirstName] = useState('');
@@ -47,7 +47,7 @@ export function RegistrationScreen({
 
     setLoading(true);
     try {
-      await walletApi.register({
+      const registeredAccount = await walletApi.register({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         personalEmail: email,
@@ -55,6 +55,7 @@ export function RegistrationScreen({
       });
       setPassword('');
       onRegistered({
+        authUserId: registeredAccount.authUserId,
         email,
         firstName: firstName.trim(),
         lastName: lastName.trim(),

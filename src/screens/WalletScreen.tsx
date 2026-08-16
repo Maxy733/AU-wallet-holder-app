@@ -20,6 +20,7 @@ export function WalletScreen({
   onSelectIssuer,
   onSignOut,
   holderName,
+  profilePhotoUri,
 }: {
   go: (screen: Screen) => void;
   hasCredential: boolean;
@@ -31,6 +32,7 @@ export function WalletScreen({
   onSelectIssuer: (provider: IssuerProvider) => void;
   onSignOut: () => void;
   holderName: string;
+  profilePhotoUri: string | null;
 }) {
   const assumptionUniversity = issuerProviders.find(
     (provider) => provider.issuerCode === 'assumption-university',
@@ -38,7 +40,7 @@ export function WalletScreen({
 
   return (
     <View style={themeStyles.screen}>
-      <Header eyebrow="GOOD AFTERNOON" title={holderName} />
+      <Header eyebrow="GOOD AFTERNOON" title={holderName} avatarUri={profilePhotoUri} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.scrollBottom}>
         <SectionLabel>YOUR CREDENTIALS</SectionLabel>
         {hasCredential ? (

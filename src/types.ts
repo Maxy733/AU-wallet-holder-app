@@ -19,7 +19,8 @@ export type Screen =
   | 'receipt'
   | 'history'
   | 'settings'
-;
+  | 'edit_profile'
+  | 'linked_issuer';
 
 export type ShareFields = {
   degree: boolean;
