@@ -5,6 +5,7 @@ import type {
   AuthMeResponse,
   AuthSession,
   HolderAccount,
+  IssuerProvider,
   LoginInput,
   OnboardingRequest,
   OnboardingSubmission,
@@ -211,6 +212,10 @@ export class HttpWalletApi implements WalletBackendApi {
 
   getHolderAccount() {
     return this.request<HolderAccount>('/holder-accounts/me', { authenticated: true });
+  }
+
+  getIssuerProviders() {
+    return this.request<IssuerProvider[]>('/issuer-providers', { authenticated: true });
   }
 
   submitOnboarding(input: OnboardingSubmission) {

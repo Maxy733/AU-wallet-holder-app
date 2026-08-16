@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { BackHeader, PrimaryButton, SecureTextInput } from '../components';
-import { registrationErrorMessage, walletApi } from '../api';
+import { BackHeader, PrimaryButton, SecondaryButton, SecureTextInput } from '../components';
+import { isAuthEmailRateLimited, registrationErrorMessage, walletApi } from '../api';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 
@@ -11,9 +11,11 @@ const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 export function RegistrationScreen({
   onBack,
   onRegistered,
+  onReturnToLogin,
 }: {
   onBack: () => void;
   onRegistered: (account: { email: string; firstName: string; lastName: string }) => void;
+  onReturnToLogin: (email: string) => void;
 }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -22,6 +24,7 @@ export function RegistrationScreen({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emailRateLimited, setEmailRateLimited] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const revealLastField = () => {
@@ -31,6 +34,7 @@ export function RegistrationScreen({
   const register = async () => {
     const email = personalEmail.trim().toLowerCase();
     setErrorMessage(null);
+    setEmailRateLimited(false);
 
     if (!firstName.trim() || !lastName.trim() || !email.includes('@')) {
       setErrorMessage('Enter your first name, last name and a valid personal email.');
@@ -56,6 +60,7 @@ export function RegistrationScreen({
         lastName: lastName.trim(),
       });
     } catch (error) {
+      setEmailRateLimited(isAuthEmailRateLimited(error));
       setErrorMessage(registrationErrorMessage(error));
     } finally {
       setPassword('');
@@ -84,7 +89,20 @@ export function RegistrationScreen({
             <Text style={styles.label}>Last name</Text>
             <TextInput style={styles.input} value={lastName} onChangeText={setLastName} placeholder="Last name" placeholderTextColor={colors.muted} autoComplete="family-name" />
             <Text style={styles.label}>Personal email</Text>
-            <TextInput style={styles.input} value={personalEmail} onChangeText={setPersonalEmail} placeholder="name@example.com" placeholderTextColor={colors.muted} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
+            <TextInput
+              style={styles.input}
+              value={personalEmail}
+              onChangeText={(value) => {
+                setPersonalEmail(value);
+                setEmailRateLimited(false);
+                setErrorMessage(null);
+              }}
+              placeholder="name@example.com"
+              placeholderTextColor={colors.muted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
             <Text style={styles.label}>Password</Text>
             <SecureTextInput
               fieldLabel="password"
@@ -101,8 +119,16 @@ export function RegistrationScreen({
             />
             <Text style={styles.passwordHint}>Include uppercase, lowercase and a number.</Text>
             {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+            {emailRateLimited ? (
+              <Text style={styles.rateLimitHelp}>An earlier signup may already have succeeded. Check this email before trying again.</Text>
+            ) : null}
           </View>
           <PrimaryButton label={loading ? 'Creating account...' : 'Create account'} onPress={register} disabled={loading} />
+          {emailRateLimited ? (
+            <View style={styles.returnAction}>
+              <SecondaryButton label="Return to login" onPress={() => onReturnToLogin(personalEmail.trim().toLowerCase())} />
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -119,4 +145,6 @@ const styles = StyleSheet.create({
   input: { height: 50, paddingHorizontal: 15, borderWidth: 1, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.bg, color: colors.ink, fontSize: 15 },
   passwordHint: { color: colors.muted, fontSize: 11.5, lineHeight: 17 },
   error: { color: colors.red, fontSize: 12.5, lineHeight: 18, marginTop: 4 },
+  rateLimitHelp: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  returnAction: { marginTop: 12 },
 });

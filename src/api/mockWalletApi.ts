@@ -6,6 +6,7 @@ import type {
   AuthMe,
   AuthSession,
   HolderAccount,
+  IssuerProvider,
   LoginInput,
   OnboardingRequest,
   OnboardingSubmission,
@@ -121,6 +122,48 @@ class MockWalletApi implements WalletBackendApi {
       createdAt: timestamp,
       updatedAt: timestamp,
     };
+  }
+
+  async getIssuerProviders(): Promise<IssuerProvider[]> {
+    await wait();
+    await this.requireAuthentication();
+    const connectionStatus = this.onboarding?.verificationStatus === 'under_review'
+      ? 'pending_verification'
+      : this.onboarding?.verificationStatus === 'matched'
+        ? 'verified'
+        : this.onboarding?.verificationStatus === 'rejected'
+          ? 'rejected'
+          : null;
+
+    return [
+      {
+        issuerCode: 'assumption-university',
+        displayName: 'Assumption University',
+        description: 'Connect to verify your Assumption University student status.',
+        availability: 'available',
+        connectionEnabled: true,
+        isMock: true,
+        connectionStatus,
+      },
+      {
+        issuerCode: 'demo-issuer-alpha',
+        displayName: 'Demo Issuer Alpha',
+        description: 'A future issuer connection for the wallet prototype.',
+        availability: 'coming_soon',
+        connectionEnabled: false,
+        isMock: true,
+        connectionStatus: null,
+      },
+      {
+        issuerCode: 'demo-issuer-beta',
+        displayName: 'Demo Issuer Beta',
+        description: 'A future issuer connection for the wallet prototype.',
+        availability: 'coming_soon',
+        connectionEnabled: false,
+        isMock: true,
+        connectionStatus: null,
+      },
+    ];
   }
 
   async submitOnboarding(input: OnboardingSubmission): Promise<OnboardingRequest> {

@@ -1,10 +1,17 @@
 import { BackendApiError } from './httpWalletApi';
 
 const SAFE_VALIDATION_MESSAGE = 'Please check the information you entered.';
+const SAFE_EMAIL_RATE_LIMIT_MESSAGE = 'Too many confirmation emails were requested. Please wait before trying again.';
+
+export function isAuthEmailRateLimited(error: unknown) {
+  return error instanceof BackendApiError && error.code === 'AUTH_EMAIL_RATE_LIMITED';
+}
 
 export function backendErrorMessage(error: unknown, fallback: string) {
   if (!(error instanceof BackendApiError)) return fallback;
-  return error.code === 'VALIDATION_ERROR' ? SAFE_VALIDATION_MESSAGE : error.message;
+  if (error.code === 'VALIDATION_ERROR') return SAFE_VALIDATION_MESSAGE;
+  if (error.code === 'AUTH_EMAIL_RATE_LIMITED') return SAFE_EMAIL_RATE_LIMIT_MESSAGE;
+  return error.message;
 }
 
 export function registrationErrorMessage(error: unknown) {
@@ -15,6 +22,8 @@ export function registrationErrorMessage(error: unknown) {
       return 'An account already exists for this email. Confirm the email if needed, then log in.';
     case 'REGISTRATION_FAILED':
       return 'We could not create your account. Please check the details and try again.';
+    case 'AUTH_EMAIL_RATE_LIMITED':
+      return SAFE_EMAIL_RATE_LIMIT_MESSAGE;
     case 'VALIDATION_ERROR':
       return SAFE_VALIDATION_MESSAGE;
     default:

@@ -2,6 +2,7 @@ export * from './BottomNav';
 export * from './CredentialCard';
 export * from './Header';
 export * from './InfoPanel';
+export * from './IssuerProviderCard';
 export * from './Notice';
 export * from './SectionLabel';
 export * from './Stat';

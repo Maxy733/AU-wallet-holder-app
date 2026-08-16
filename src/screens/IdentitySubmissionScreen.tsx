@@ -180,7 +180,7 @@ export function IdentitySubmissionScreen({
               placeholder={nationality === 'thai' ? 'Enter 13-digit ID number' : 'Enter passport number'}
               placeholderTextColor={colors.muted}
               keyboardType={nationality === 'thai' ? 'number-pad' : 'default'}
-              maxLength={nationality === 'thai' ? 13 : 20}
+              maxLength={nationality === 'thai' ? 13 : undefined}
               autoCapitalize={nationality === 'thai' ? 'none' : 'characters'}
               autoCorrect={false}
               visible={showDocumentNumber}

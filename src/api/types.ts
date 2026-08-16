@@ -1,5 +1,12 @@
 export type AccountStatus = 'pending' | 'active' | 'rejected' | 'suspended';
 export type VerificationStatus = 'under_review' | 'matched' | 'rejected';
+export type IssuerAvailability = 'available' | 'coming_soon';
+export type IssuerConnectionStatus =
+  | 'pending_verification'
+  | 'verified'
+  | 'rejected'
+  | 'disconnected'
+  | null;
 
 export type RegistrationInput = {
   firstName: string;
@@ -77,6 +84,16 @@ export type OnboardingRequest = {
   submittedAt: string;
 };
 
+export type IssuerProvider = {
+  issuerCode: string;
+  displayName: string;
+  description: string;
+  availability: IssuerAvailability;
+  connectionEnabled: boolean;
+  isMock: boolean;
+  connectionStatus: IssuerConnectionStatus;
+};
+
 export type ApiSuccess<T> = {
   data: T;
   message: string;
@@ -100,6 +117,7 @@ export interface WalletBackendApi {
   logout(): Promise<void>;
   getAuthMe(): Promise<AuthMe>;
   getHolderAccount(): Promise<HolderAccount>;
+  getIssuerProviders(): Promise<IssuerProvider[]>;
   submitOnboarding(input: OnboardingSubmission): Promise<OnboardingRequest>;
   getMyOnboardingRequest(): Promise<OnboardingRequest | null>;
 }

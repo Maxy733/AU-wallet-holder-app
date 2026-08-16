@@ -6,6 +6,7 @@ import {
   AuthMe,
   BackendApiError,
   HolderAccount,
+  IssuerProvider,
   isSessionError,
   OnboardingRequest,
   sessionErrorMessage,
@@ -46,6 +47,9 @@ export default function App() {
   const [setupError, setSetupError] = useState<string | null>(null);
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [holderAccount, setHolderAccount] = useState<HolderAccount | null>(null);
+  const [issuerProviders, setIssuerProviders] = useState<IssuerProvider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const [providersError, setProvidersError] = useState<string | null>(null);
   const [hasCredential, setHasCredential] = useState(false);
   const [shareFields, setShareFields] = useState({
     degree: true,
@@ -55,6 +59,20 @@ export default function App() {
     standing: false,
   });
   const [history, setHistory] = useState<HistoryEvent[]>([]);
+
+  const loadIssuerProviders = useCallback(async () => {
+    setProvidersLoading(true);
+    setProvidersError(null);
+    try {
+      setIssuerProviders(await walletApi.getIssuerProviders());
+    } catch (error) {
+      if (isSessionError(error)) throw error;
+      setIssuerProviders([]);
+      setProvidersError('Could not load issuer providers. Check the connection and try again.');
+    } finally {
+      setProvidersLoading(false);
+    }
+  }, []);
 
   const loadHolderState = useCallback(async () => {
     setScreen('loading');
@@ -70,6 +88,7 @@ export default function App() {
       setHolderAccount(holder);
       const request = await walletApi.getMyOnboardingRequest();
       setOnboardingRequest(request);
+      await loadIssuerProviders();
       if (request?.verificationStatus === 'matched' && holder.accountStatus === 'active' && holder.confirmedAt) {
         const pinExists = await hasWalletPin(me.authUserId);
         setPinPurpose('wallet');
@@ -82,6 +101,8 @@ export default function App() {
         setCurrentUser(null);
         setOnboardingRequest(null);
         setHolderAccount(null);
+        setIssuerProviders([]);
+        setProvidersError(null);
         setLoginNotice(sessionErrorMessage(error instanceof BackendApiError ? error.code : 'AUTHENTICATION_REQUIRED'));
         setScreen('login');
         return;
@@ -89,15 +110,16 @@ export default function App() {
       setSetupError(error instanceof BackendApiError ? error.message : 'Could not load the holder account.');
       setScreen('loading');
     }
-  }, []);
+  }, [loadIssuerProviders]);
 
   const refreshOnboarding = useCallback(async () => {
     const holder = await walletApi.getHolderAccount();
     const request = await walletApi.getMyOnboardingRequest();
     setHolderAccount(holder);
     setOnboardingRequest(request);
+    await loadIssuerProviders();
     setScreen(request ? 'onboarding_status' : 'identity_submission');
-  }, []);
+  }, [loadIssuerProviders]);
 
   const continueAfterMatch = useCallback(async () => {
     if (!currentUser || onboardingRequest?.verificationStatus !== 'matched') return;
@@ -137,6 +159,8 @@ export default function App() {
       setCurrentUser(null);
       setOnboardingRequest(null);
       setHolderAccount(null);
+      setIssuerProviders([]);
+      setProvidersError(null);
       setHasCredential(false);
       setHolderProfile({ firstName: '', lastName: '', studentId: '' });
       setHistory([]);
@@ -151,6 +175,8 @@ export default function App() {
       setCurrentUser(null);
       setOnboardingRequest(null);
       setHolderAccount(null);
+      setIssuerProviders([]);
+      setProvidersError(null);
       setHasCredential(false);
       setHolderProfile({ firstName: '', lastName: '', studentId: '' });
       setHistory([]);
@@ -195,14 +221,35 @@ export default function App() {
   }, [screen]);
 
   const walletEnabled = holderAccount?.accountStatus === 'active' && Boolean(holderAccount.confirmedAt);
-  const connectionStatus = onboardingRequest?.verificationStatus ?? 'not_connected';
   const holderName = [holderProfile.firstName, holderProfile.lastName].filter(Boolean).join(' ') || 'Wallet holder';
   const studentId = holderProfile.studentId || 'Pending verification';
   const showNav = walletEnabled && ['wallet', 'history', 'settings', 'success'].includes(screen);
 
-  const openAssumptionConnection = () => {
+  const openAssumptionConnection = useCallback(() => {
     setScreen(onboardingRequest ? 'onboarding_status' : 'identity_submission');
-  };
+  }, [onboardingRequest]);
+
+  const selectIssuerProvider = useCallback((provider: IssuerProvider) => {
+    if (
+      provider.issuerCode === 'assumption-university' &&
+      provider.availability === 'available' &&
+      provider.connectionEnabled
+    ) {
+      openAssumptionConnection();
+    }
+  }, [openAssumptionConnection]);
+
+  const retryIssuerProviders = useCallback(() => {
+    void loadIssuerProviders().catch((error) => {
+      if (!isSessionError(error)) return;
+      setCurrentUser(null);
+      setOnboardingRequest(null);
+      setHolderAccount(null);
+      setIssuerProviders([]);
+      setLoginNotice(sessionErrorMessage(error instanceof BackendApiError ? error.code : 'AUTHENTICATION_REQUIRED'));
+      setScreen('login');
+    });
+  }, [loadIssuerProviders]);
 
   const goFromWallet = (nextScreen: Screen) => {
     if (nextScreen === 'share') {
@@ -241,6 +288,10 @@ export default function App() {
         return (
           <RegistrationScreen
             onBack={() => setScreen('welcome')}
+            onReturnToLogin={(email) => {
+              setAuthEmail(email);
+              setScreen('login');
+            }}
             onRegistered={({ email, firstName, lastName }) => {
               setAuthEmail(email);
               setHolderProfile({ firstName, lastName, studentId: '' });
@@ -253,9 +304,9 @@ export default function App() {
       case 'login':
         return <LoginScreen initialEmail={authEmail} initialError={loginNotice} onBack={() => { setLoginNotice(null); setScreen('welcome'); }} onLoggedIn={() => { setLoginNotice(null); void loadHolderState(); }} onRegister={() => setScreen('registration')} />;
       case 'identity_submission':
-        return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => ({ ...profile, studentId: submittedStudentId })); setOnboardingRequest(request); setScreen('onboarding_status'); }} onBack={() => setScreen('wallet')} />;
+        return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => ({ ...profile, studentId: submittedStudentId })); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
       case 'onboarding_status':
-        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => ({ ...profile, studentId: submittedStudentId })); setOnboardingRequest(request); setScreen('onboarding_status'); }} onBack={() => setScreen('wallet')} />;
+        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => ({ ...profile, studentId: submittedStudentId })); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
         return (
           <OnboardingStatusScreen
             request={onboardingRequest}
@@ -300,14 +351,26 @@ export default function App() {
             go={goFromWallet}
             hasCredential={hasCredential}
             walletEnabled={walletEnabled}
-            connectionStatus={connectionStatus}
-            onConnectAssumption={openAssumptionConnection}
+            issuerProviders={issuerProviders}
+            providersLoading={providersLoading}
+            providersError={providersError}
+            onRetryProviders={retryIssuerProviders}
+            onSelectIssuer={selectIssuerProvider}
             onSignOut={() => void signOut()}
             holderName={holderName}
           />
         );
       case 'trusted_services':
-        return <TrustedServicesScreen onBack={() => setScreen('wallet')} />;
+        return (
+          <TrustedServicesScreen
+            providers={issuerProviders}
+            loading={providersLoading}
+            errorMessage={providersError}
+            onRetry={retryIssuerProviders}
+            onSelectIssuer={selectIssuerProvider}
+            onBack={() => setScreen('wallet')}
+          />
+        );
       case 'offer':
         return <OfferScreen go={setScreen} holderName={holderName} />;
       case 'verifying':
@@ -318,8 +381,11 @@ export default function App() {
             go={goFromWallet}
             hasCredential={hasCredential}
             walletEnabled={walletEnabled}
-            connectionStatus={connectionStatus}
-            onConnectAssumption={openAssumptionConnection}
+            issuerProviders={issuerProviders}
+            providersLoading={providersLoading}
+            providersError={providersError}
+            onRetryProviders={retryIssuerProviders}
+            onSelectIssuer={selectIssuerProvider}
             onSignOut={() => void signOut()}
             holderName={holderName}
           />
@@ -358,7 +424,7 @@ export default function App() {
       default:
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
     }
-  }, [authEmail, connectionStatus, continueAfterMatch, currentUser, hasCredential, history, holderAccount, holderName, loadHolderState, loginNotice, onboardingRequest, pinPurpose, refreshOnboarding, screen, setupError, shareFields, signOut, studentId, walletEnabled]);
+  }, [authEmail, continueAfterMatch, currentUser, hasCredential, history, holderAccount, holderName, issuerProviders, loadHolderState, loginNotice, onboardingRequest, pinPurpose, providersError, providersLoading, refreshOnboarding, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
 
   return (
     <SafeAreaProvider>

@@ -110,6 +110,7 @@ With `EXPO_PUBLIC_USE_MOCK_API=true`, registration, login, trusted-service verif
 - `POST /auth/logout`
 - `GET /auth/me`
 - `GET /holder-accounts/me`
+- `GET /issuer-providers`
 - `POST /onboarding-verification/requests`
 - `GET /onboarding-verification/requests/me`
 
@@ -140,7 +141,7 @@ Register with a personal email
 -> matched enables wallet PIN setup and wallet features
 ```
 
-The other three trusted-service entries are visible mock providers only. Selecting one displays a notice and does not exchange any data. After Assumption University is connected, these mock providers are collapsed under **See more services**.
+Issuer-provider cards are loaded from authenticated `GET /issuer-providers`. Availability, connection enablement, mock labeling and connection status come from the backend. Provider artwork remains local and is selected by `issuerCode`; coming-soon providers cannot connect.
 
 Live backend flow when mock mode is disabled:
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { backendErrorMessage, isMockApi, walletApi } from '../api';
+import { backendErrorMessage, isAuthEmailRateLimited, isMockApi, walletApi } from '../api';
 import { PrimaryButton, SecondaryButton } from '../components';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
@@ -16,15 +16,18 @@ export function CheckEmailScreen({
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emailRateLimited, setEmailRateLimited] = useState(false);
 
   const resend = async () => {
     setResending(true);
     setMessage(null);
     setErrorMessage(null);
+    setEmailRateLimited(false);
     try {
       await walletApi.resendConfirmation(email);
       setMessage('If the account is awaiting confirmation, a new email has been sent.');
     } catch (error) {
+      setEmailRateLimited(isAuthEmailRateLimited(error));
       setErrorMessage(backendErrorMessage(error, 'Could not resend the confirmation email.'));
     } finally {
       setResending(false);
@@ -44,6 +47,9 @@ export function CheckEmailScreen({
         <Text style={styles.email}>{email}</Text>
         {message ? <Text style={styles.success}>{message}</Text> : null}
         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+        {emailRateLimited ? (
+          <Text style={styles.rateLimitHelp}>An earlier signup may already have succeeded. Check this email for a confirmation message before trying again.</Text>
+        ) : null}
       </View>
       <View style={themeStyles.actionStack}>
         <PrimaryButton label="Return to login" onPress={onReturnToLogin} />
@@ -62,4 +68,5 @@ const styles = StyleSheet.create({
   email: { marginTop: 10, color: colors.ink, fontSize: 15, fontWeight: '700', textAlign: 'center' },
   success: { marginTop: 22, color: colors.green, fontSize: 12.5, lineHeight: 18, textAlign: 'center' },
   error: { marginTop: 22, color: colors.red, fontSize: 12.5, lineHeight: 18, textAlign: 'center' },
+  rateLimitHelp: { marginTop: 10, color: colors.muted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
 });
