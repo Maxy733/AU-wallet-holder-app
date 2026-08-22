@@ -14,7 +14,6 @@ import {
   walletApi,
 } from './src/api';
 import { BottomNav, PrimaryButton } from './src/components';
-import { loadHolderIdentity, saveHolderIdentity } from './src/lib/holderIdentity';
 import { loadProfilePreferences, ProfilePreferences, saveProfilePreferences } from './src/lib/profilePreferences';
 import { hasWalletPin, saveWalletPin } from './src/lib/walletSecurity';
 import { CheckEmailScreen } from './src/screens/CheckEmailScreen';
@@ -44,7 +43,6 @@ import type { HistoryEvent, Screen } from './src/types';
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
   const [authEmail, setAuthEmail] = useState('');
-  const [holderProfile, setHolderProfile] = useState({ firstName: '', lastName: '', studentId: '' });
   const [profilePreferences, setProfilePreferences] = useState<ProfilePreferences>({ nickname: '', photoUri: null });
   const [currentUser, setCurrentUser] = useState<AuthMe | null>(null);
   const [onboardingRequest, setOnboardingRequest] = useState<OnboardingRequest | null>(null);
@@ -84,9 +82,8 @@ export default function App() {
     setSetupError(null);
     try {
       const me = await walletApi.getAuthMe();
-      const [holder, initiallySavedHolderIdentity, savedProfilePreferences] = await Promise.all([
+      const [holder, savedProfilePreferences] = await Promise.all([
         walletApi.getHolderAccount(),
-        loadHolderIdentity(me.authUserId, me.email).catch(() => ({ firstName: '', lastName: '', studentId: '' })),
         loadProfilePreferences(me.authUserId).catch(() => ({ nickname: '', photoUri: null })),
       ]);
       if (me.role !== 'student' || !me.holderAccountId) {
@@ -95,24 +92,6 @@ export default function App() {
 
       setCurrentUser(me);
       setHolderAccount(holder);
-      const savedHolderIdentity = (
-        initiallySavedHolderIdentity.firstName ||
-        initiallySavedHolderIdentity.lastName ||
-        initiallySavedHolderIdentity.studentId ||
-        holder.authUserId === me.authUserId
-      )
-        ? initiallySavedHolderIdentity
-        : await loadHolderIdentity(holder.authUserId, me.email)
-          .catch(() => initiallySavedHolderIdentity);
-      const restoredHolderIdentity = {
-        firstName: holder.firstName?.trim() || me.firstName?.trim() || savedHolderIdentity.firstName,
-        lastName: holder.lastName?.trim() || me.lastName?.trim() || savedHolderIdentity.lastName,
-        studentId: savedHolderIdentity.studentId,
-      };
-      setHolderProfile(restoredHolderIdentity);
-      if (restoredHolderIdentity.firstName || restoredHolderIdentity.lastName || restoredHolderIdentity.studentId) {
-        await saveHolderIdentity(me.authUserId, restoredHolderIdentity, me.email).catch(() => undefined);
-      }
       setProfilePreferences(savedProfilePreferences);
       const request = await walletApi.getMyOnboardingRequest();
       setOnboardingRequest(request);
@@ -190,7 +169,6 @@ export default function App() {
       setIssuerProviders([]);
       setProvidersError(null);
       setHasCredential(false);
-      setHolderProfile({ firstName: '', lastName: '', studentId: '' });
       setProfilePreferences({ nickname: '', photoUri: null });
       setHistory([]);
       setScreen('welcome');
@@ -207,7 +185,6 @@ export default function App() {
       setIssuerProviders([]);
       setProvidersError(null);
       setHasCredential(false);
-      setHolderProfile({ firstName: '', lastName: '', studentId: '' });
       setProfilePreferences({ nickname: '', photoUri: null });
       setHistory([]);
       setLoginNotice(sessionErrorMessage(reason));
@@ -251,9 +228,9 @@ export default function App() {
   }, [screen]);
 
   const walletEnabled = holderAccount?.accountStatus === 'active' && Boolean(holderAccount.confirmedAt);
-  const registeredName = [holderProfile.firstName, holderProfile.lastName].filter(Boolean).join(' ') || 'Wallet holder';
+  const registeredName = [holderAccount?.firstName?.trim(), holderAccount?.lastName?.trim()].filter(Boolean).join(' ') || 'Wallet holder';
   const displayName = profilePreferences.nickname || registeredName;
-  const studentId = holderProfile.studentId || 'Pending verification';
+  const studentId = holderAccount?.studentId?.trim() || 'Pending verification';
   const showNav = walletEnabled && ['wallet', 'history', 'settings', 'success'].includes(screen);
 
   const openAssumptionConnection = useCallback(() => {
@@ -281,6 +258,12 @@ export default function App() {
       setScreen('login');
     });
   }, [loadIssuerProviders]);
+
+  const acceptOnboardingRequest = useCallback((request: OnboardingRequest) => {
+    setOnboardingRequest(request);
+    setScreen('onboarding_status');
+    retryIssuerProviders();
+  }, [retryIssuerProviders]);
 
   const goWithShareProtection = useCallback((nextScreen: Screen) => {
     if (nextScreen === 'share') {
@@ -323,11 +306,8 @@ export default function App() {
               setAuthEmail(email);
               setScreen('login');
             }}
-            onRegistered={async ({ authUserId, email, firstName, lastName }) => {
+            onRegistered={({ email }) => {
               setAuthEmail(email);
-              const registeredIdentity = { firstName, lastName, studentId: '' };
-              setHolderProfile(registeredIdentity);
-              await saveHolderIdentity(authUserId, registeredIdentity, email).catch(() => undefined);
               setScreen('check_email');
             }}
           />
@@ -337,9 +317,9 @@ export default function App() {
       case 'login':
         return <LoginScreen initialEmail={authEmail} initialError={loginNotice} onBack={() => { setLoginNotice(null); setScreen('welcome'); }} onLoggedIn={() => { setLoginNotice(null); void loadHolderState(); }} onRegister={() => setScreen('registration')} />;
       case 'identity_submission':
-        return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => { const nextProfile = { ...profile, studentId: submittedStudentId }; if (currentUser) void saveHolderIdentity(currentUser.authUserId, nextProfile, currentUser.email).catch(() => undefined); return nextProfile; }); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
+        return <IdentitySubmissionScreen onSubmitted={acceptOnboardingRequest} onBack={() => setScreen('wallet')} />;
       case 'onboarding_status':
-        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={(request, submittedStudentId) => { setHolderProfile((profile) => { const nextProfile = { ...profile, studentId: submittedStudentId }; if (currentUser) void saveHolderIdentity(currentUser.authUserId, nextProfile, currentUser.email).catch(() => undefined); return nextProfile; }); setOnboardingRequest(request); setScreen('onboarding_status'); retryIssuerProviders(); }} onBack={() => setScreen('wallet')} />;
+        if (!onboardingRequest) return <IdentitySubmissionScreen onSubmitted={acceptOnboardingRequest} onBack={() => setScreen('wallet')} />;
         return (
           <OnboardingStatusScreen
             request={onboardingRequest}
@@ -491,7 +471,7 @@ export default function App() {
       default:
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
     }
-  }, [authEmail, continueAfterMatch, currentUser, displayName, goWithShareProtection, hasCredential, history, holderAccount, issuerProviders, loadHolderState, loginNotice, onboardingRequest, pinPurpose, profilePreferences, providersError, providersLoading, refreshOnboarding, registeredName, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
+  }, [acceptOnboardingRequest, authEmail, continueAfterMatch, currentUser, displayName, goWithShareProtection, hasCredential, history, holderAccount, issuerProviders, loadHolderState, loginNotice, onboardingRequest, pinPurpose, profilePreferences, providersError, providersLoading, refreshOnboarding, registeredName, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
 
   return (
     <SafeAreaProvider>

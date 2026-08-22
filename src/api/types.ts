@@ -49,8 +49,6 @@ export type AuthMe = {
   email: string;
   role: AuthUser['role'];
   accountStatus: AccountStatus | null;
-  firstName?: string;
-  lastName?: string;
 };
 
 export type AuthMeResponse = Omit<AuthMe, 'authUserId'> & {
@@ -60,14 +58,15 @@ export type AuthMeResponse = Omit<AuthMe, 'authUserId'> & {
 export type HolderAccount = {
   holderAccountId: number;
   authUserId: string;
+  firstName: string;
+  lastName: string;
+  studentId: string | null;
   universityEmail: string | null;
   personalEmail: string;
   accountStatus: AccountStatus;
   confirmedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  firstName?: string;
-  lastName?: string;
 };
 
 export type ApplicantNationality = 'thai' | 'foreigner';

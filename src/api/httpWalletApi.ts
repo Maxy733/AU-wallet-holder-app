@@ -207,8 +207,6 @@ export class HttpWalletApi implements WalletBackendApi {
       email: response.email,
       role: response.role,
       accountStatus: response.accountStatus,
-      firstName: response.firstName,
-      lastName: response.lastName,
     };
   }
 

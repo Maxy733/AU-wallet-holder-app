@@ -31,6 +31,7 @@ class MockWalletApi implements WalletBackendApi {
   private authUserId = 'mock-auth-default';
   private firstName = '';
   private lastName = '';
+  private submittedStudentId = '';
   private authenticated = false;
   private sessionLoaded = false;
   private accountStatus: 'pending' | 'active' = 'pending';
@@ -56,6 +57,7 @@ class MockWalletApi implements WalletBackendApi {
     this.authUserId = await mockAuthIdForEmail(this.email);
     this.firstName = input.firstName.trim();
     this.lastName = input.lastName.trim();
+    this.submittedStudentId = '';
     this.authenticated = false;
     this.sessionLoaded = true;
     this.accountStatus = 'pending';
@@ -109,8 +111,6 @@ class MockWalletApi implements WalletBackendApi {
       email: this.email,
       role: 'student',
       accountStatus: this.accountStatus,
-      firstName: this.firstName,
-      lastName: this.lastName,
     };
   }
 
@@ -121,14 +121,15 @@ class MockWalletApi implements WalletBackendApi {
     return {
       holderAccountId: 12,
       authUserId: this.authUserId,
+      firstName: this.firstName,
+      lastName: this.lastName,
+      studentId: this.accountStatus === 'active' ? this.submittedStudentId || null : null,
       universityEmail: null,
       personalEmail: this.email,
       accountStatus: this.accountStatus,
       confirmedAt: this.accountStatus === 'active' ? timestamp : null,
       createdAt: timestamp,
       updatedAt: timestamp,
-      firstName: this.firstName,
-      lastName: this.lastName,
     };
   }
 
@@ -186,6 +187,7 @@ class MockWalletApi implements WalletBackendApi {
     // Do not retain or log the passport or Thai national ID. This mock checks
     // only that a value was supplied and discards it immediately after the call.
     const rejected = input.admissionNo.trim().toUpperCase().startsWith('REJECT');
+    this.submittedStudentId = input.admissionNo.trim();
     this.onboarding = {
       onboardingRequestId: Date.now(),
       verificationStatus: rejected ? 'rejected' : 'under_review',

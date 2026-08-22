@@ -14,7 +14,7 @@ export function RegistrationScreen({
   onReturnToLogin,
 }: {
   onBack: () => void;
-  onRegistered: (account: { authUserId: string; email: string; firstName: string; lastName: string }) => Promise<void> | void;
+  onRegistered: (account: { authUserId: string; email: string; firstName: string; lastName: string }) => void;
   onReturnToLogin: (email: string) => void;
 }) {
   const [firstName, setFirstName] = useState('');
