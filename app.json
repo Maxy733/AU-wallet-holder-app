@@ -3,6 +3,7 @@
     "name": "AU-wallet-holder-app",
     "slug": "AU-wallet-holder-app",
     "version": "1.0.0",
+    "scheme": "auwallet",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -32,7 +33,8 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
