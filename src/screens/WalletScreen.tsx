@@ -128,7 +128,11 @@ export function WalletScreen({
             <Text style={styles.providerError}>{offersError}</Text>
             <SecondaryButton label="Try again" onPress={onRetryOffers} />
           </View>
-        ) : null}
+        ) : (
+          <View style={styles.offerRefresh}>
+            <SecondaryButton label="Refresh offers" onPress={onRetryOffers} />
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -140,6 +144,7 @@ const styles = StyleSheet.create({
   providerMessage: { marginBottom: 10, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.border, borderRadius: 18, backgroundColor: colors.card, alignItems: 'center' },
   providerMessageText: { color: colors.muted, fontSize: 12 },
   providerError: { marginBottom: 10, color: colors.red, fontSize: 12, lineHeight: 18, textAlign: 'center' },
+  offerRefresh: { marginTop: 4 },
   seeMoreButton: { minHeight: 44, marginBottom: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   seeMoreText: { color: colors.red, fontSize: 12, fontWeight: '800' },
   seeMoreIcon: { color: colors.red, fontSize: 20, fontWeight: '500' },
