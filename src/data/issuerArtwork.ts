@@ -3,6 +3,7 @@ import type { ImageSourcePropType } from 'react-native';
 type IssuerArtwork = {
   image?: ImageSourcePropType;
   initials: string;
+  resizeMode?: 'contain' | 'cover';
 };
 
 const artworkByIssuerCode: Record<string, IssuerArtwork> = {
@@ -10,8 +11,15 @@ const artworkByIssuerCode: Record<string, IssuerArtwork> = {
     image: require('../../assets/Assumption_University_of_Thailand_(logo).png'),
     initials: 'AU',
   },
-  'demo-issuer-alpha': { initials: 'A' },
-  'demo-issuer-beta': { initials: 'B' },
+  thaid: {
+    image: require('../../assets/ThaID.png'),
+    initials: 'TH',
+  },
+  'dlt-qr-licence': {
+    image: require('../../assets/DLTQRLicence.png'),
+    initials: 'DLT',
+    resizeMode: 'cover',
+  },
 };
 
 export function getIssuerArtwork(issuerCode: string, displayName: string): IssuerArtwork {

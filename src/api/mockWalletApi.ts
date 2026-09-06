@@ -3,8 +3,10 @@ import * as Crypto from 'expo-crypto';
 import { BackendApiError } from './httpWalletApi';
 import { clearApiSession, readApiSession, saveApiSession } from './secureSession';
 import type {
+  AcceptedCredentialOffer,
   AuthMe,
   AuthSession,
+  CredentialOffer,
   HolderAccount,
   IssuerProvider,
   LoginInput,
@@ -36,6 +38,7 @@ class MockWalletApi implements WalletBackendApi {
   private sessionLoaded = false;
   private accountStatus: 'pending' | 'active' = 'pending';
   private onboarding: OnboardingRequest | null = null;
+  private credentialOffers: CredentialOffer[] = [];
 
   private async requireAuthentication() {
     if (!this.sessionLoaded) await this.hasStoredSession();
@@ -62,6 +65,7 @@ class MockWalletApi implements WalletBackendApi {
     this.sessionLoaded = true;
     this.accountStatus = 'pending';
     this.onboarding = null;
+    this.credentialOffers = [];
     await clearApiSession('mock');
     return {
       authUserId: this.authUserId,
@@ -155,24 +159,52 @@ class MockWalletApi implements WalletBackendApi {
         connectionStatus,
       },
       {
-        issuerCode: 'demo-issuer-alpha',
-        displayName: 'Demo Issuer Alpha',
-        description: 'A future issuer connection for the wallet prototype.',
+        issuerCode: 'thaid',
+        displayName: 'ThaID (Thai Digital Identity)',
+        description: 'Prototype placeholder for a planned ThaID integration.',
         availability: 'coming_soon',
         connectionEnabled: false,
         isMock: true,
         connectionStatus: null,
       },
       {
-        issuerCode: 'demo-issuer-beta',
-        displayName: 'Demo Issuer Beta',
-        description: 'A future issuer connection for the wallet prototype.',
+        issuerCode: 'dlt-qr-licence',
+        displayName: 'DLT QR Licence',
+        description: 'Prototype placeholder for a planned DLT QR Licence integration.',
         availability: 'coming_soon',
         connectionEnabled: false,
         isMock: true,
         connectionStatus: null,
       },
     ];
+  }
+
+  async getMyCredentialOffers(): Promise<CredentialOffer[]> {
+    await wait();
+    await this.requireAuthentication();
+    return this.credentialOffers.map((offer) => ({
+      ...offer,
+      preview: { ...offer.preview },
+    }));
+  }
+
+  async acceptCredentialOffer(offerId: string): Promise<AcceptedCredentialOffer> {
+    await wait();
+    await this.requireAuthentication();
+    const offer = this.credentialOffers.find((candidate) => candidate.offerId === offerId);
+    if (!offer || offer.status !== 'pending') {
+      throw new BackendApiError('CREDENTIAL_OFFER_NOT_FOUND', 'This credential offer is no longer pending.', 404);
+    }
+    const accepted: AcceptedCredentialOffer = {
+      ...offer,
+      status: 'accepted',
+      credentialId: `mock-vc-${Date.now()}`,
+      acceptedAt: now(),
+    };
+    this.credentialOffers = this.credentialOffers.map((candidate) =>
+      candidate.offerId === offerId ? accepted : candidate,
+    );
+    return accepted;
   }
 
   async submitOnboarding(input: OnboardingSubmission): Promise<OnboardingRequest> {

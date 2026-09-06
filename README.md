@@ -111,8 +111,14 @@ With `EXPO_PUBLIC_USE_MOCK_API=true`, registration, login, trusted-service verif
 - `GET /auth/me`
 - `GET /holder-accounts/me`
 - `GET /issuer-providers`
+- `GET /vc/academic-transcripts/offers/me`
+- `POST /vc/academic-transcripts/offers/:offerId/accept`
 - `POST /onboarding-verification/requests`
 - `GET /onboarding-verification/requests/me`
+
+The credential-offer response shapes and authorization requirements are in
+`docs/credential-offer-api-contract.md`. Pending UI is data-driven: the wallet
+does not show an offer unless the authenticated API returns one.
 
 Protected requests send the access token as:
 

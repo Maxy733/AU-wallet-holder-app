@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import type { IssuerProvider } from '../api';
+import type { CredentialOffer, IssuerProvider } from '../api';
 import { Header, IssuerProviderCard, SecondaryButton, SectionLabel } from '../components';
 import { CredentialCard } from '../components/CredentialCard';
 import { Notice } from '../components/Notice';
@@ -12,11 +12,15 @@ import { Screen } from '../types';
 export function WalletScreen({
   go,
   hasCredential,
+  pendingOffer,
+  offersLoading,
+  offersError,
   walletEnabled,
   issuerProviders,
   providersLoading,
   providersError,
   onRetryProviders,
+  onRetryOffers,
   onSelectIssuer,
   onSignOut,
   holderName,
@@ -24,11 +28,15 @@ export function WalletScreen({
 }: {
   go: (screen: Screen) => void;
   hasCredential: boolean;
+  pendingOffer: CredentialOffer | null;
+  offersLoading: boolean;
+  offersError: string | null;
   walletEnabled: boolean;
   issuerProviders: IssuerProvider[];
   providersLoading: boolean;
   providersError: string | null;
   onRetryProviders: () => void;
+  onRetryOffers: () => void;
   onSelectIssuer: (provider: IssuerProvider) => void;
   onSignOut: () => void;
   holderName: string;
@@ -98,30 +106,29 @@ export function WalletScreen({
             <Text style={styles.lockedBody}>Connect and verify with Assumption University to enable credentials, sharing and activity history.</Text>
             <View style={styles.signOutAction}><SecondaryButton label="Sign out" onPress={onSignOut} /></View>
           </View>
-        ) : (
+        ) : pendingOffer ? (
           <>
             <SectionLabel>PENDING</SectionLabel>
-            {!hasCredential ? (
-              <Notice
-                icon="AU"
-                tint={colors.red}
-                bg={colors.softRed}
-                title="AU Registrar wants to issue a credential"
-                subtitle="Education Transcript VC - tap to review"
-                onPress={() => go('offer')}
-              />
-            ) : (
-              <Notice
-                icon="E"
-                tint={colors.brown}
-                bg={colors.sand}
-                title="Employer A requests a verification"
-                subtitle="Job application - JOB-2026-001"
-                onPress={() => go('share')}
-              />
-            )}
+            <Notice
+              icon="AU"
+              tint={colors.red}
+              bg={colors.softRed}
+              title={`${pendingOffer.issuerName} wants to issue a credential`}
+              subtitle={`${pendingOffer.displayName} - tap to review`}
+              onPress={() => go('offer')}
+            />
           </>
-        )}
+        ) : offersLoading ? (
+          <View style={styles.providerMessage}>
+            <ActivityIndicator size="small" color={colors.red} />
+            <Text style={styles.providerMessageText}>Checking for credential offers...</Text>
+          </View>
+        ) : offersError ? (
+          <View style={styles.providerMessage}>
+            <Text style={styles.providerError}>{offersError}</Text>
+            <SecondaryButton label="Try again" onPress={onRetryOffers} />
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );

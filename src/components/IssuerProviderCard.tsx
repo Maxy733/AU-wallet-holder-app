@@ -35,6 +35,7 @@ export function IssuerProviderCard({
 }) {
   const artwork = getIssuerArtwork(provider.issuerCode, provider.displayName);
   const action = providerAction(provider);
+  const mockLabel = provider.issuerCode === 'assumption-university' ? 'Mock' : 'Prototype';
 
   return (
     <Pressable
@@ -47,7 +48,7 @@ export function IssuerProviderCard({
     >
       <View style={[styles.logo, artwork.image ? styles.imageLogo : null]}>
         {artwork.image ? (
-          <Image source={artwork.image} style={styles.logoImage} resizeMode="contain" />
+          <Image source={artwork.image} style={styles.logoImage} resizeMode={artwork.resizeMode ?? 'contain'} />
         ) : (
           <Text style={styles.logoText}>{artwork.initials}</Text>
         )}
@@ -55,7 +56,7 @@ export function IssuerProviderCard({
       <View style={styles.providerText}>
         <View style={styles.nameRow}>
           <Text style={styles.name}>{provider.displayName}</Text>
-          {provider.isMock ? <Text style={styles.mockLabel}>Mock</Text> : null}
+          {provider.isMock ? <Text style={styles.mockLabel}>{mockLabel}</Text> : null}
         </View>
         <Text style={styles.description}>{provider.description}</Text>
       </View>

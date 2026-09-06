@@ -1,11 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { PrimaryButton } from '../components';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
-import { Screen } from '../types';
 
-export function VerifyingScreen({ go }: { go: (screen: Screen) => void }) {
+export function VerifyingScreen() {
   const spinValue = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -26,9 +24,9 @@ export function VerifyingScreen({ go }: { go: (screen: Screen) => void }) {
   return (
     <View style={themeStyles.screen}>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 }}>
-        <Text style={[styles.welcomeTitle, { fontSize: 22 }]}>Verification in Progress</Text>
+        <Text style={[styles.welcomeTitle, { fontSize: 22 }]}>Accepting credential</Text>
         <Text style={[styles.centerBody, { marginBottom: 40 }]}>
-          Assumption University systems are cross-referencing your submitted documentation...
+          Confirming the pending AU Registrar offer and adding the issued credential to your wallet...
         </Text>
         <View style={styles.successHalo}>
           <View style={[styles.haloOuter, { backgroundColor: colors.sand }]} />
@@ -36,9 +34,6 @@ export function VerifyingScreen({ go }: { go: (screen: Screen) => void }) {
           <Animated.View style={[styles.haloCore, { backgroundColor: colors.brown, transform: [{ rotate: spin }] }]}>
             <Text style={{ fontSize: 32 }}>⏳</Text>
           </Animated.View>
-        </View>
-        <View style={themeStyles.actionStack}>
-          <PrimaryButton label="Return" onPress={() => go('welcome')} />
         </View>
       </View>
     </View>

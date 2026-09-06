@@ -5,6 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   AuthMe,
   BackendApiError,
+  CredentialOffer,
   HolderAccount,
   IssuerProvider,
   isSessionError,
@@ -53,6 +54,10 @@ export default function App() {
   const [issuerProviders, setIssuerProviders] = useState<IssuerProvider[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providersError, setProvidersError] = useState<string | null>(null);
+  const [credentialOffers, setCredentialOffers] = useState<CredentialOffer[]>([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+  const [offersError, setOffersError] = useState<string | null>(null);
+  const [offerAcceptanceError, setOfferAcceptanceError] = useState<string | null>(null);
   const [hasCredential, setHasCredential] = useState(false);
   const [shareFields, setShareFields] = useState({
     degree: true,
@@ -74,6 +79,22 @@ export default function App() {
       setProvidersError('Could not load issuer providers. Check the connection and try again.');
     } finally {
       setProvidersLoading(false);
+    }
+  }, []);
+
+  const loadCredentialOffers = useCallback(async () => {
+    setOffersLoading(true);
+    setOffersError(null);
+    try {
+      const offers = await walletApi.getMyCredentialOffers();
+      setCredentialOffers(offers);
+      setHasCredential(offers.some((offer) => offer.status === 'accepted'));
+    } catch (error) {
+      if (isSessionError(error)) throw error;
+      setCredentialOffers([]);
+      setOffersError('Could not load credential offers. Check the connection and try again.');
+    } finally {
+      setOffersLoading(false);
     }
   }, []);
 
@@ -110,6 +131,9 @@ export default function App() {
         setHolderAccount(null);
         setIssuerProviders([]);
         setProvidersError(null);
+        setCredentialOffers([]);
+        setOffersError(null);
+        setOfferAcceptanceError(null);
         setLoginNotice(sessionErrorMessage(error instanceof BackendApiError ? error.code : 'AUTHENTICATION_REQUIRED'));
         setScreen('login');
         return;
@@ -168,6 +192,9 @@ export default function App() {
       setHolderAccount(null);
       setIssuerProviders([]);
       setProvidersError(null);
+      setCredentialOffers([]);
+      setOffersError(null);
+      setOfferAcceptanceError(null);
       setHasCredential(false);
       setProfilePreferences({ nickname: '', photoUri: null });
       setHistory([]);
@@ -184,6 +211,9 @@ export default function App() {
       setHolderAccount(null);
       setIssuerProviders([]);
       setProvidersError(null);
+      setCredentialOffers([]);
+      setOffersError(null);
+      setOfferAcceptanceError(null);
       setHasCredential(false);
       setProfilePreferences({ nickname: '', photoUri: null });
       setHistory([]);
@@ -209,29 +239,21 @@ export default function App() {
     };
   }, [loadHolderState]);
 
-  useEffect(() => {
-    if (screen !== 'verifying') return;
-
-    const verificationTimer = setTimeout(() => {
-      setHasCredential(true);
-      setHistory([{
-        id: 'initial-issue',
-        type: 'issue',
-        title: 'Issued: Education Transcript VC',
-        subtitle: 'From AU Registrar',
-        targetScreen: 'credential',
-      }]);
-      setScreen('success');
-    }, 2500);
-
-    return () => clearTimeout(verificationTimer);
-  }, [screen]);
-
   const walletEnabled = holderAccount?.accountStatus === 'active' && Boolean(holderAccount.confirmedAt);
+  const pendingOffer = credentialOffers.find((offer) => offer.status === 'pending') ?? null;
   const registeredName = [holderAccount?.firstName?.trim(), holderAccount?.lastName?.trim()].filter(Boolean).join(' ') || 'Wallet holder';
   const displayName = profilePreferences.nickname || registeredName;
   const studentId = holderAccount?.studentId?.trim() || 'Pending verification';
   const showNav = walletEnabled && ['wallet', 'history', 'settings', 'success'].includes(screen);
+
+  useEffect(() => {
+    if (!walletEnabled || !['wallet', 'success'].includes(screen)) return;
+    void loadCredentialOffers().catch((error) => {
+      if (!isSessionError(error)) return;
+      setLoginNotice(sessionErrorMessage(error instanceof BackendApiError ? error.code : 'AUTHENTICATION_REQUIRED'));
+      setScreen('login');
+    });
+  }, [loadCredentialOffers, screen, walletEnabled]);
 
   const openAssumptionConnection = useCallback(() => {
     setScreen(onboardingRequest ? 'onboarding_status' : 'identity_submission');
@@ -258,6 +280,42 @@ export default function App() {
       setScreen('login');
     });
   }, [loadIssuerProviders]);
+
+  const retryCredentialOffers = useCallback(() => {
+    void loadCredentialOffers().catch((error) => {
+      if (!isSessionError(error)) return;
+      setCurrentUser(null);
+      setCredentialOffers([]);
+      setLoginNotice(sessionErrorMessage(error instanceof BackendApiError ? error.code : 'AUTHENTICATION_REQUIRED'));
+      setScreen('login');
+    });
+  }, [loadCredentialOffers]);
+
+  const acceptPendingOffer = useCallback(async () => {
+    if (!pendingOffer) return;
+    setOfferAcceptanceError(null);
+    setScreen('verifying');
+    try {
+      const accepted = await walletApi.acceptCredentialOffer(pendingOffer.offerId);
+      setCredentialOffers((offers) => offers.map((offer) =>
+        offer.offerId === accepted.offerId ? accepted : offer,
+      ));
+      setHasCredential(true);
+      setHistory((events) => [{
+        id: accepted.credentialId,
+        type: 'issue',
+        title: `Issued: ${accepted.displayName}`,
+        subtitle: `From ${accepted.issuerName}`,
+        targetScreen: 'credential',
+      }, ...events]);
+      setScreen('success');
+    } catch (error) {
+      setOfferAcceptanceError(
+        error instanceof BackendApiError ? error.message : 'The credential offer could not be accepted.',
+      );
+      setScreen('offer');
+    }
+  }, [pendingOffer]);
 
   const acceptOnboardingRequest = useCallback((request: OnboardingRequest) => {
     setOnboardingRequest(request);
@@ -363,11 +421,15 @@ export default function App() {
           <WalletScreen
             go={goWithShareProtection}
             hasCredential={hasCredential}
+            pendingOffer={pendingOffer}
+            offersLoading={offersLoading}
+            offersError={offersError}
             walletEnabled={walletEnabled}
             issuerProviders={issuerProviders}
             providersLoading={providersLoading}
             providersError={providersError}
             onRetryProviders={retryIssuerProviders}
+            onRetryOffers={retryCredentialOffers}
             onSelectIssuer={selectIssuerProvider}
             onSignOut={() => void signOut()}
             holderName={displayName}
@@ -386,19 +448,31 @@ export default function App() {
           />
         );
       case 'offer':
-        return <OfferScreen go={setScreen} holderName={registeredName} />;
+        if (!pendingOffer) return null;
+        return (
+          <OfferScreen
+            go={setScreen}
+            offer={pendingOffer}
+            errorMessage={offerAcceptanceError}
+            onAccept={() => void acceptPendingOffer()}
+          />
+        );
       case 'verifying':
-        return <VerifyingScreen go={setScreen} />;
+        return <VerifyingScreen />;
       case 'success':
         return (
           <WalletScreen
             go={goWithShareProtection}
             hasCredential={hasCredential}
+            pendingOffer={pendingOffer}
+            offersLoading={offersLoading}
+            offersError={offersError}
             walletEnabled={walletEnabled}
             issuerProviders={issuerProviders}
             providersLoading={providersLoading}
             providersError={providersError}
             onRetryProviders={retryIssuerProviders}
+            onRetryOffers={retryCredentialOffers}
             onSelectIssuer={selectIssuerProvider}
             onSignOut={() => void signOut()}
             holderName={displayName}
@@ -471,7 +545,7 @@ export default function App() {
       default:
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
     }
-  }, [acceptOnboardingRequest, authEmail, continueAfterMatch, currentUser, displayName, goWithShareProtection, hasCredential, history, holderAccount, issuerProviders, loadHolderState, loginNotice, onboardingRequest, pinPurpose, profilePreferences, providersError, providersLoading, refreshOnboarding, registeredName, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
+  }, [acceptOnboardingRequest, acceptPendingOffer, authEmail, continueAfterMatch, currentUser, displayName, goWithShareProtection, hasCredential, history, holderAccount, issuerProviders, loadHolderState, loginNotice, offerAcceptanceError, offersError, offersLoading, onboardingRequest, pendingOffer, pinPurpose, profilePreferences, providersError, providersLoading, refreshOnboarding, registeredName, retryCredentialOffers, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
 
   return (
     <SafeAreaProvider>

@@ -97,6 +97,34 @@ export type IssuerProvider = {
   connectionStatus: IssuerConnectionStatus;
 };
 
+export type CredentialOfferStatus = 'pending' | 'accepted' | 'declined';
+
+export type AcademicTranscriptPreview = {
+  degree: string;
+  major: string;
+  graduationDate: string;
+  gpa: string | number;
+};
+
+export type CredentialOffer = {
+  offerId: string;
+  credentialType: 'academic_transcript';
+  displayName: string;
+  issuerName: string;
+  issuerDid: string;
+  studentNumber: string;
+  holderName: string;
+  status: CredentialOfferStatus;
+  createdAt: string;
+  preview: AcademicTranscriptPreview;
+};
+
+export type AcceptedCredentialOffer = CredentialOffer & {
+  status: 'accepted';
+  credentialId: string;
+  acceptedAt: string;
+};
+
 export type ApiSuccess<T> = {
   data: T;
   message: string;
@@ -121,6 +149,8 @@ export interface WalletBackendApi {
   getAuthMe(): Promise<AuthMe>;
   getHolderAccount(): Promise<HolderAccount>;
   getIssuerProviders(): Promise<IssuerProvider[]>;
+  getMyCredentialOffers(): Promise<CredentialOffer[]>;
+  acceptCredentialOffer(offerId: string): Promise<AcceptedCredentialOffer>;
   submitOnboarding(input: OnboardingSubmission): Promise<OnboardingRequest>;
   getMyOnboardingRequest(): Promise<OnboardingRequest | null>;
 }

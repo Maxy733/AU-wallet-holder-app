@@ -1,35 +1,48 @@
 import React from 'react';
 import { View, ScrollView, Text } from 'react-native';
+import type { CredentialOffer } from '../api';
 import { BackHeader, InfoPanel, PrimaryButton, SecondaryButton } from '../components';
 import { copy } from '../theme/mockData';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
 
-export function OfferScreen({ go, holderName }: { go: (screen: Screen) => void; holderName: string }) {
+export function OfferScreen({
+  go,
+  offer,
+  errorMessage,
+  onAccept,
+}: {
+  go: (screen: Screen) => void;
+  offer: CredentialOffer;
+  errorMessage: string | null;
+  onAccept: () => void;
+}) {
   return (
     <View style={themeStyles.screen}>
-      <BackHeader title="New credential offer" subtitle="From AU Registrar" onBack={() => go('wallet')} />
+      <BackHeader title="New credential offer" subtitle={`From ${offer.issuerName}`} onBack={() => go('wallet')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
-        <InfoPanel title="Education Transcript VC" rows={[['Issuer', 'AU Registrar'], ['Issuer DID', 'did:web:au.edu/issuer']]} />
+        <InfoPanel title={offer.displayName} rows={[['Issuer', offer.issuerName], ['Issuer DID', offer.issuerDid]]} />
         <InfoPanel
           title="Preview"
           rows={[
-            ['Name', holderName],
-            ['Degree', copy.degree],
-            ['Major', copy.major],
-            ['Graduation date', copy.graduationISO],
-            ['GPA', copy.gpa],
+            ['Name', offer.holderName],
+            ['Student ID', offer.studentNumber],
+            ['Degree', offer.preview.degree || copy.degree],
+            ['Major', offer.preview.major || copy.major],
+            ['Graduation date', offer.preview.graduationDate || copy.graduationISO],
+            ['GPA', String(offer.preview.gpa || copy.gpa)],
           ]}
         />
         <InfoPanel title="What happens next">
           <Text style={themeStyles.smallBody}>
-            Approving asks you to confirm identity, then after verified, AU signs and stores this credential in your wallet.
+            Approving accepts this issuer-created offer and stores the resulting credential in your wallet.
           </Text>
         </InfoPanel>
+        {errorMessage ? <Text style={[themeStyles.smallBody, { color: '#CC1919' }]}>{errorMessage}</Text> : null}
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label="Approve & continue" onPress={() => go('verifying')} />
-        <SecondaryButton label="Decline" onPress={() => go('wallet')} />
+        <PrimaryButton label="Approve & continue" onPress={onAccept} />
+        <SecondaryButton label="Back" onPress={() => go('wallet')} />
       </View>
     </View>
   );

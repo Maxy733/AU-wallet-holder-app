@@ -1,9 +1,11 @@
 import type {
+  AcceptedCredentialOffer,
   ApiErrorBody,
   ApiSuccess,
   AuthMe,
   AuthMeResponse,
   AuthSession,
+  CredentialOffer,
   HolderAccount,
   IssuerProvider,
   LoginInput,
@@ -216,6 +218,19 @@ export class HttpWalletApi implements WalletBackendApi {
 
   getIssuerProviders() {
     return this.request<IssuerProvider[]>('/issuer-providers', { authenticated: true });
+  }
+
+  getMyCredentialOffers() {
+    return this.request<CredentialOffer[]>('/vc/academic-transcripts/offers/me', {
+      authenticated: true,
+    });
+  }
+
+  acceptCredentialOffer(offerId: string) {
+    return this.request<AcceptedCredentialOffer>(
+      `/vc/academic-transcripts/offers/${encodeURIComponent(offerId)}/accept`,
+      { method: 'POST', authenticated: true },
+    );
   }
 
   submitOnboarding(input: OnboardingSubmission) {
