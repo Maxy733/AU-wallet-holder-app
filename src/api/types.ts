@@ -97,7 +97,7 @@ export type IssuerProvider = {
   connectionStatus: IssuerConnectionStatus;
 };
 
-export type CredentialOfferStatus = 'pending' | 'accepted' | 'declined';
+export type CredentialOfferStatus = 'pending' | 'issued' | 'declined';
 
 export type AcademicTranscriptPreview = {
   degree: string;
@@ -116,13 +116,23 @@ export type CredentialOffer = {
   holderName: string;
   status: CredentialOfferStatus;
   createdAt: string;
+  credentialIssuer?: string;
+  nonce?: string;
   preview: AcademicTranscriptPreview;
 };
 
-export type AcceptedCredentialOffer = CredentialOffer & {
-  status: 'accepted';
+export type CredentialOfferProof = {
+  proof_type: 'jwt';
+  jwt: string;
+};
+
+export type IssuedCredential = {
+  credential: string;
+  format: 'dc+sd-jwt';
+  offerId: string;
+  status: 'issued';
   credentialId: string;
-  acceptedAt: string;
+  issuedAt: string;
 };
 
 export type ApiSuccess<T> = {
@@ -150,7 +160,7 @@ export interface WalletBackendApi {
   getHolderAccount(): Promise<HolderAccount>;
   getIssuerProviders(): Promise<IssuerProvider[]>;
   getMyCredentialOffers(): Promise<CredentialOffer[]>;
-  acceptCredentialOffer(offerId: string): Promise<AcceptedCredentialOffer>;
+  acceptCredentialOffer(offerId: string, proof: CredentialOfferProof): Promise<IssuedCredential>;
   submitOnboarding(input: OnboardingSubmission): Promise<OnboardingRequest>;
   getMyOnboardingRequest(): Promise<OnboardingRequest | null>;
 }

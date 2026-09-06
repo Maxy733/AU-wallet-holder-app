@@ -3,12 +3,13 @@ import * as Crypto from 'expo-crypto';
 import { BackendApiError } from './httpWalletApi';
 import { clearApiSession, readApiSession, saveApiSession } from './secureSession';
 import type {
-  AcceptedCredentialOffer,
   AuthMe,
   AuthSession,
   CredentialOffer,
+  CredentialOfferProof,
   HolderAccount,
   IssuerProvider,
+  IssuedCredential,
   LoginInput,
   OnboardingRequest,
   OnboardingSubmission,
@@ -188,23 +189,25 @@ class MockWalletApi implements WalletBackendApi {
     }));
   }
 
-  async acceptCredentialOffer(offerId: string): Promise<AcceptedCredentialOffer> {
+  async acceptCredentialOffer(offerId: string, _proof: CredentialOfferProof): Promise<IssuedCredential> {
     await wait();
     await this.requireAuthentication();
     const offer = this.credentialOffers.find((candidate) => candidate.offerId === offerId);
     if (!offer || offer.status !== 'pending') {
       throw new BackendApiError('CREDENTIAL_OFFER_NOT_FOUND', 'This credential offer is no longer pending.', 404);
     }
-    const accepted: AcceptedCredentialOffer = {
-      ...offer,
-      status: 'accepted',
+    const issued: IssuedCredential = {
+      credential: `mock-dc+sd-jwt.${Crypto.randomUUID()}`,
+      format: 'dc+sd-jwt',
+      offerId: offer.offerId,
+      status: 'issued',
       credentialId: `mock-vc-${Date.now()}`,
-      acceptedAt: now(),
+      issuedAt: now(),
     };
     this.credentialOffers = this.credentialOffers.map((candidate) =>
-      candidate.offerId === offerId ? accepted : candidate,
+      candidate.offerId === offerId ? { ...candidate, status: 'issued' } : candidate,
     );
-    return accepted;
+    return issued;
   }
 
   async submitOnboarding(input: OnboardingSubmission): Promise<OnboardingRequest> {

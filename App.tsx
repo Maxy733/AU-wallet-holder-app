@@ -15,6 +15,8 @@ import {
   walletApi,
 } from './src/api';
 import { BottomNav, PrimaryButton } from './src/components';
+import { loadIssuedCredential, saveIssuedCredential } from './src/lib/credentialStore';
+import { createCredentialOfferProof } from './src/lib/holderProof';
 import { loadProfilePreferences, ProfilePreferences, saveProfilePreferences } from './src/lib/profilePreferences';
 import { hasWalletPin, saveWalletPin } from './src/lib/walletSecurity';
 import { CheckEmailScreen } from './src/screens/CheckEmailScreen';
@@ -86,9 +88,12 @@ export default function App() {
     setOffersLoading(true);
     setOffersError(null);
     try {
-      const offers = await walletApi.getMyCredentialOffers();
+      const [offers, storedCredential] = await Promise.all([
+        walletApi.getMyCredentialOffers(),
+        currentUser ? loadIssuedCredential(currentUser.authUserId) : Promise.resolve(null),
+      ]);
       setCredentialOffers(offers);
-      setHasCredential(offers.some((offer) => offer.status === 'accepted'));
+      setHasCredential(offers.some((offer) => offer.status === 'issued') || Boolean(storedCredential));
     } catch (error) {
       if (isSessionError(error)) throw error;
       setCredentialOffers([]);
@@ -96,7 +101,7 @@ export default function App() {
     } finally {
       setOffersLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   const loadHolderState = useCallback(async () => {
     setScreen('loading');
@@ -292,22 +297,32 @@ export default function App() {
   }, [loadCredentialOffers]);
 
   const acceptPendingOffer = useCallback(async () => {
-    if (!pendingOffer) return;
+    if (!pendingOffer || !currentUser) return;
     setOfferAcceptanceError(null);
     setScreen('verifying');
     try {
-      const accepted = await walletApi.acceptCredentialOffer(pendingOffer.offerId);
+      const jwt = await createCredentialOfferProof({
+        userId: currentUser.authUserId,
+        credentialIssuer: pendingOffer.credentialIssuer,
+        nonce: pendingOffer.nonce,
+      });
+      const issued = await walletApi.acceptCredentialOffer(pendingOffer.offerId, {
+        proof_type: 'jwt',
+        jwt,
+      });
+      await saveIssuedCredential(currentUser.authUserId, issued);
       setCredentialOffers((offers) => offers.map((offer) =>
-        offer.offerId === accepted.offerId ? accepted : offer,
+        offer.offerId === issued.offerId ? { ...offer, status: 'issued' } : offer,
       ));
       setHasCredential(true);
       setHistory((events) => [{
-        id: accepted.credentialId,
+        id: issued.credentialId,
         type: 'issue',
-        title: `Issued: ${accepted.displayName}`,
-        subtitle: `From ${accepted.issuerName}`,
+        title: `Issued: ${pendingOffer.displayName}`,
+        subtitle: `From ${pendingOffer.issuerName}`,
         targetScreen: 'credential',
       }, ...events]);
+      await loadCredentialOffers();
       setScreen('success');
     } catch (error) {
       setOfferAcceptanceError(
@@ -315,7 +330,7 @@ export default function App() {
       );
       setScreen('offer');
     }
-  }, [pendingOffer]);
+  }, [currentUser, loadCredentialOffers, pendingOffer]);
 
   const acceptOnboardingRequest = useCallback((request: OnboardingRequest) => {
     setOnboardingRequest(request);

@@ -4,6 +4,7 @@
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@noble/curves": "^2.4.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "expo": "^54.0.36",
     "expo-crypto": "~15.0.9",

@@ -1,13 +1,14 @@
 import type {
-  AcceptedCredentialOffer,
   ApiErrorBody,
   ApiSuccess,
   AuthMe,
   AuthMeResponse,
   AuthSession,
   CredentialOffer,
+  CredentialOfferProof,
   HolderAccount,
   IssuerProvider,
+  IssuedCredential,
   LoginInput,
   OnboardingRequest,
   OnboardingSubmission,
@@ -226,10 +227,10 @@ export class HttpWalletApi implements WalletBackendApi {
     });
   }
 
-  acceptCredentialOffer(offerId: string) {
-    return this.request<AcceptedCredentialOffer>(
+  acceptCredentialOffer(offerId: string, proof: CredentialOfferProof) {
+    return this.request<IssuedCredential>(
       `/vc/academic-transcripts/offers/${encodeURIComponent(offerId)}/accept`,
-      { method: 'POST', authenticated: true },
+      { method: 'POST', body: { proof }, authenticated: true },
     );
   }
 
