@@ -23,26 +23,46 @@ export function UnlockPinScreen({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const submittingRef = useRef(false);
   const actionLabel = loading ? 'Checking...' : purpose === 'share' ? 'Confirm PIN' : 'Unlock';
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const unlock = async () => {
+  const unlock = async (pinToVerify = pin) => {
+    if (submittingRef.current || pinToVerify.length !== 6) return;
+
+    submittingRef.current = true;
     setLoading(true);
-    const valid = await verifyWalletPin(userId, pin);
-    setLoading(false);
-    if (valid) {
-      onUnlocked();
-    } else {
+    setError(false);
+    try {
+      const valid = await verifyWalletPin(userId, pinToVerify);
+      if (valid) {
+        onUnlocked();
+        return;
+      }
       setError(true);
       setPin('');
       inputRef.current?.focus();
+    } catch {
+      setError(true);
+      setPin('');
+      inputRef.current?.focus();
+    } finally {
+      submittingRef.current = false;
+      setLoading(false);
     }
+  };
+
+  const updatePin = (value: string) => {
+    const nextPin = value.replace(/\D/g, '').slice(0, 6);
+    setError(false);
+    setPin(nextPin);
+    if (nextPin.length === 6) void unlock(nextPin);
   };
 
   return (
     <View style={themeStyles.screen}>
-      <TextInput ref={inputRef} style={styles.hiddenInput} value={pin} onChangeText={(value) => { setError(false); setPin(value); }} maxLength={6} keyboardType="number-pad" inputAccessoryViewID={Platform.OS === 'ios' ? PIN_ACCESSORY_ID : undefined} autoFocus />
+      <TextInput ref={inputRef} style={styles.hiddenInput} value={pin} onChangeText={updatePin} maxLength={6} keyboardType="number-pad" inputAccessoryViewID={Platform.OS === 'ios' ? PIN_ACCESSORY_ID : undefined} autoFocus />
       <KeyboardAvoidingView
         style={styles.keyboardAvoider}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

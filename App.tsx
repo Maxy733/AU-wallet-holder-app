@@ -15,7 +15,12 @@ import {
   walletApi,
 } from './src/api';
 import { BottomNav, PrimaryButton } from './src/components';
-import { loadIssuedCredential, saveIssuedCredential } from './src/lib/credentialStore';
+import {
+  credentialDisplayFromOffer,
+  type IssuedCredentialDisplay,
+  loadIssuedCredential,
+  saveIssuedCredential,
+} from './src/lib/credentialStore';
 import { createCredentialOfferProof } from './src/lib/holderProof';
 import { loadProfilePreferences, ProfilePreferences, saveProfilePreferences } from './src/lib/profilePreferences';
 import { hasWalletPin, saveWalletPin } from './src/lib/walletSecurity';
@@ -61,6 +66,7 @@ export default function App() {
   const [offersError, setOffersError] = useState<string | null>(null);
   const [offerAcceptanceError, setOfferAcceptanceError] = useState<string | null>(null);
   const [hasCredential, setHasCredential] = useState(false);
+  const [issuedCredentialDisplay, setIssuedCredentialDisplay] = useState<IssuedCredentialDisplay | null>(null);
   const [shareFields, setShareFields] = useState({
     degree: true,
     major: true,
@@ -92,11 +98,20 @@ export default function App() {
         walletApi.getMyCredentialOffers(),
         currentUser ? loadIssuedCredential(currentUser.authUserId) : Promise.resolve(null),
       ]);
+      const matchingOffer = storedCredential
+        ? offers.find((offer) => offer.offerId === storedCredential.offerId)
+        : offers.find((offer) => offer.status === 'issued');
+      const display = storedCredential?.display ?? (matchingOffer ? credentialDisplayFromOffer(matchingOffer) : null);
       setCredentialOffers(offers);
+      setIssuedCredentialDisplay(display);
       setHasCredential(offers.some((offer) => offer.status === 'issued') || Boolean(storedCredential));
+      if (currentUser && storedCredential && !storedCredential.display && matchingOffer) {
+        await saveIssuedCredential(currentUser.authUserId, storedCredential, matchingOffer);
+      }
     } catch (error) {
       if (isSessionError(error)) throw error;
       setCredentialOffers([]);
+      setIssuedCredentialDisplay(null);
       setOffersError('Could not load credential offers. Check the connection and try again.');
     } finally {
       setOffersLoading(false);
@@ -137,6 +152,7 @@ export default function App() {
         setIssuerProviders([]);
         setProvidersError(null);
         setCredentialOffers([]);
+        setIssuedCredentialDisplay(null);
         setOffersError(null);
         setOfferAcceptanceError(null);
         setLoginNotice(sessionErrorMessage(error instanceof BackendApiError ? error.code : 'AUTHENTICATION_REQUIRED'));
@@ -198,6 +214,7 @@ export default function App() {
       setIssuerProviders([]);
       setProvidersError(null);
       setCredentialOffers([]);
+      setIssuedCredentialDisplay(null);
       setOffersError(null);
       setOfferAcceptanceError(null);
       setHasCredential(false);
@@ -217,6 +234,7 @@ export default function App() {
       setIssuerProviders([]);
       setProvidersError(null);
       setCredentialOffers([]);
+      setIssuedCredentialDisplay(null);
       setOffersError(null);
       setOfferAcceptanceError(null);
       setHasCredential(false);
@@ -291,6 +309,7 @@ export default function App() {
       if (!isSessionError(error)) return;
       setCurrentUser(null);
       setCredentialOffers([]);
+      setIssuedCredentialDisplay(null);
       setLoginNotice(sessionErrorMessage(error instanceof BackendApiError ? error.code : 'AUTHENTICATION_REQUIRED'));
       setScreen('login');
     });
@@ -310,7 +329,8 @@ export default function App() {
         proof_type: 'jwt',
         jwt,
       });
-      await saveIssuedCredential(currentUser.authUserId, issued);
+      await saveIssuedCredential(currentUser.authUserId, issued, pendingOffer);
+      setIssuedCredentialDisplay(credentialDisplayFromOffer(pendingOffer));
       setCredentialOffers((offers) => offers.map((offer) =>
         offer.offerId === issued.offerId ? { ...offer, status: 'issued' } : offer,
       ));
@@ -449,6 +469,7 @@ export default function App() {
             onSignOut={() => void signOut()}
             holderName={displayName}
             profilePhotoUri={profilePreferences.photoUri}
+            credential={issuedCredentialDisplay}
           />
         );
       case 'trusted_services':
@@ -492,10 +513,18 @@ export default function App() {
             onSignOut={() => void signOut()}
             holderName={displayName}
             profilePhotoUri={profilePreferences.photoUri}
+            credential={issuedCredentialDisplay}
           />
         );
       case 'credential':
-        return <CredentialScreen go={goWithShareProtection} holderName={registeredName} studentId={studentId} />;
+        return (
+          <CredentialScreen
+            go={goWithShareProtection}
+            holderName={registeredName}
+            studentId={studentId}
+            credential={issuedCredentialDisplay}
+          />
+        );
       case 'share':
         return (
           <ShareScreen
@@ -560,7 +589,7 @@ export default function App() {
       default:
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
     }
-  }, [acceptOnboardingRequest, acceptPendingOffer, authEmail, continueAfterMatch, currentUser, displayName, goWithShareProtection, hasCredential, history, holderAccount, issuerProviders, loadHolderState, loginNotice, offerAcceptanceError, offersError, offersLoading, onboardingRequest, pendingOffer, pinPurpose, profilePreferences, providersError, providersLoading, refreshOnboarding, registeredName, retryCredentialOffers, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
+  }, [acceptOnboardingRequest, acceptPendingOffer, authEmail, continueAfterMatch, currentUser, displayName, goWithShareProtection, hasCredential, history, holderAccount, issuedCredentialDisplay, issuerProviders, loadHolderState, loginNotice, offerAcceptanceError, offersError, offersLoading, onboardingRequest, pendingOffer, pinPurpose, profilePreferences, providersError, providersLoading, refreshOnboarding, registeredName, retryCredentialOffers, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareFields, signOut, studentId, walletEnabled]);
 
   return (
     <SafeAreaProvider>

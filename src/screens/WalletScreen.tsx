@@ -5,6 +5,7 @@ import type { CredentialOffer, IssuerProvider } from '../api';
 import { Header, IssuerProviderCard, SecondaryButton, SectionLabel } from '../components';
 import { CredentialCard } from '../components/CredentialCard';
 import { Notice } from '../components/Notice';
+import type { IssuedCredentialDisplay } from '../lib/credentialStore';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
@@ -25,6 +26,7 @@ export function WalletScreen({
   onSignOut,
   holderName,
   profilePhotoUri,
+  credential,
 }: {
   go: (screen: Screen) => void;
   hasCredential: boolean;
@@ -41,6 +43,7 @@ export function WalletScreen({
   onSignOut: () => void;
   holderName: string;
   profilePhotoUri: string | null;
+  credential: IssuedCredentialDisplay | null;
 }) {
   const assumptionUniversity = issuerProviders.find(
     (provider) => provider.issuerCode === 'assumption-university',
@@ -53,7 +56,13 @@ export function WalletScreen({
         <SectionLabel>YOUR CREDENTIALS</SectionLabel>
         {hasCredential ? (
           <Pressable onPress={() => go('credential')}>
-            <CredentialCard />
+            <CredentialCard
+              degree={credential?.degree || 'Not provided'}
+              major={credential?.major || 'Not provided'}
+              graduationDate={credential?.graduationDate || 'Not provided'}
+              gpa={credential?.gpa ?? 'Not provided'}
+              issuerName={credential?.issuerName || 'Not provided'}
+            />
           </Pressable>
         ) : (
           <View>

@@ -1,21 +1,56 @@
 import * as SecureStore from 'expo-secure-store';
 
-import type { IssuedCredential } from '../api/types';
+import type { CredentialOffer, IssuedCredential } from '../api/types';
 
-const memoryOnlyCredentials = new Map<string, IssuedCredential>();
+export type IssuedCredentialDisplay = {
+  holderName: string;
+  studentNumber: string;
+  issuerName: string;
+  issuerDid: string;
+  degree: string;
+  major: string;
+  graduationDate: string;
+  gpa: string | number;
+};
+
+export type StoredIssuedCredential = IssuedCredential & {
+  display?: IssuedCredentialDisplay;
+};
+
+const memoryOnlyCredentials = new Map<string, StoredIssuedCredential>();
 
 const credentialStorageKey = (userId: string) => `auwallet.issued-credential.${userId}`;
 
-export async function saveIssuedCredential(userId: string, credential: IssuedCredential) {
+export function credentialDisplayFromOffer(offer: CredentialOffer): IssuedCredentialDisplay {
+  return {
+    holderName: offer.holderName,
+    studentNumber: offer.studentNumber,
+    issuerName: offer.issuerName,
+    issuerDid: offer.issuerDid,
+    degree: offer.preview.degree,
+    major: offer.preview.major,
+    graduationDate: offer.preview.graduationDate,
+    gpa: offer.preview.gpa,
+  };
+}
+
+export async function saveIssuedCredential(
+  userId: string,
+  credential: IssuedCredential,
+  offer?: CredentialOffer,
+) {
   const storageKey = credentialStorageKey(userId);
-  memoryOnlyCredentials.set(storageKey, credential);
+  const storedCredential: StoredIssuedCredential = offer
+    ? { ...credential, display: credentialDisplayFromOffer(offer) }
+    : credential;
+  memoryOnlyCredentials.set(storageKey, storedCredential);
   if (!(await SecureStore.isAvailableAsync())) return;
-  await SecureStore.setItemAsync(storageKey, JSON.stringify(credential), {
+  await SecureStore.setItemAsync(storageKey, JSON.stringify(storedCredential), {
     keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
   });
 }
 
-export async function loadIssuedCredential(userId: string): Promise<IssuedCredential | null> {
+export async function loadIssuedCredential(userId: string): Promise<StoredIssuedCredential | null> {
   const storageKey = credentialStorageKey(userId);
   const memoryCredential = memoryOnlyCredentials.get(storageKey);
   const serialized = (await SecureStore.isAvailableAsync())
@@ -24,7 +59,7 @@ export async function loadIssuedCredential(userId: string): Promise<IssuedCreden
   if (!serialized) return null;
 
   try {
-    const credential = JSON.parse(serialized) as Partial<IssuedCredential>;
+    const credential = JSON.parse(serialized) as Partial<StoredIssuedCredential>;
     if (
       typeof credential.credential !== 'string' ||
       credential.format !== 'dc+sd-jwt' ||
@@ -35,7 +70,7 @@ export async function loadIssuedCredential(userId: string): Promise<IssuedCreden
     ) {
       return null;
     }
-    return credential as IssuedCredential;
+    return credential as StoredIssuedCredential;
   } catch {
     return null;
   }
