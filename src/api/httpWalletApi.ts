@@ -32,9 +32,10 @@ export class BackendApiError extends Error {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH';
   body?: unknown;
   authenticated?: boolean;
+  accessToken?: string;
   retryAfterRefresh?: boolean;
 };
 
@@ -83,7 +84,9 @@ export class HttpWalletApi implements WalletBackendApi {
   private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const headers: Record<string, string> = {};
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
-    if (options.authenticated) {
+    if (options.accessToken) {
+      headers.Authorization = `Bearer ${options.accessToken}`;
+    } else if (options.authenticated) {
       await this.loadSession();
       if (!this.accessToken) {
         throw new BackendApiError('ACCESS_TOKEN_INVALID_OR_EXPIRED', 'Please log in again.', 401);
@@ -153,6 +156,22 @@ export class HttpWalletApi implements WalletBackendApi {
 
   async resendConfirmation(email: string) {
     await this.request<null>('/auth/resend-confirmation', { method: 'POST', body: { email } });
+  }
+
+  async forgotPassword(email: string, redirectTo?: string) {
+    await this.request<null>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email, ...(redirectTo ? { redirectTo } : {}) },
+    });
+  }
+
+  async completePasswordReset(accessToken: string, password: string) {
+    await this.request<null>('/auth/password', {
+      method: 'PATCH',
+      body: { password },
+      accessToken,
+      retryAfterRefresh: false,
+    });
   }
 
   async login(input: LoginInput) {

@@ -12,12 +12,14 @@ export function LoginScreen({
   onBack,
   onLoggedIn,
   onRegister,
+  onForgotPassword,
 }: {
   initialEmail?: string;
   initialError?: string | null;
   onBack: () => void;
   onLoggedIn: () => void;
   onRegister: () => void;
+  onForgotPassword: (email: string) => void;
 }) {
   const [email, setEmail] = useState(initialEmail ?? '');
   const [password, setPassword] = useState('');
@@ -87,6 +89,9 @@ export function LoginScreen({
               visible={showPassword}
               onToggleVisibility={() => setShowPassword((current) => !current)}
             />
+            <Pressable onPress={() => onForgotPassword(email.trim().toLowerCase())}>
+              <Text style={styles.forgotLink}>Forgot password?</Text>
+            </Pressable>
             {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
           </View>
           <PrimaryButton label={loading ? 'Logging in...' : 'Log in'} onPress={login} disabled={loading} />
@@ -106,5 +111,6 @@ const styles = StyleSheet.create({
   label: { marginTop: 3, color: colors.ink, fontSize: 13, fontWeight: '700' },
   input: { height: 52, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 16, backgroundColor: colors.bg, color: colors.ink, fontSize: 15 },
   error: { marginTop: 4, color: colors.red, fontSize: 12.5, lineHeight: 18 },
+  forgotLink: { alignSelf: 'flex-end', color: colors.red, fontSize: 13, fontWeight: '700' },
   registerLink: { marginTop: 20, color: colors.red, fontSize: 13.5, fontWeight: '700', textAlign: 'center' },
 });

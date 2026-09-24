@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Platform, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Platform, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
 
@@ -34,6 +34,7 @@ import { CameraScreen } from './src/screens/CameraScreen';
 import CreatePinScreen from './src/screens/CreatePinScreen';
 import { CredentialScreen } from './src/screens/CredentialScreen';
 import { EditProfileScreen } from './src/screens/EditProfileScreen';
+import { ForgotPasswordScreen } from './src/screens/ForgotPasswordScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { IdentitySubmissionScreen } from './src/screens/IdentitySubmissionScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
@@ -42,6 +43,7 @@ import { OfferScreen } from './src/screens/OfferScreen';
 import { OnboardingStatusScreen } from './src/screens/OnboardingStatusScreen';
 import { ReceiptScreen } from './src/screens/ReceiptScreen';
 import { RegistrationScreen } from './src/screens/RegistrationScreen';
+import { ResetPasswordScreen } from './src/screens/ResetPasswordScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { ShareScreen } from './src/screens/ShareScreen';
 import { TrustedServicesScreen } from './src/screens/TrustedServicesScreen';
@@ -54,6 +56,34 @@ import { colors } from './src/theme/constants';
 import { styles } from './src/theme/styles';
 import type { HistoryEvent, Screen, ShareFields } from './src/types';
 
+function decodeUrlParameter(value: string) {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, ' '));
+  } catch {
+    return value;
+  }
+}
+
+function passwordRecoveryFromUrl(url: string): { accessToken?: string; error?: string } | null {
+  const parameters = new Map<string, string>();
+  for (const section of [url.split('?')[1]?.split('#')[0], url.split('#')[1]]) {
+    if (!section) continue;
+    for (const pair of section.split('&')) {
+      const [rawKey, ...rawValue] = pair.split('=');
+      if (!rawKey) continue;
+      parameters.set(
+        decodeUrlParameter(rawKey),
+        decodeUrlParameter(rawValue.join('=')),
+      );
+    }
+  }
+
+  if (parameters.get('type') !== 'recovery' && !parameters.has('error_code')) return null;
+  const accessToken = parameters.get('access_token');
+  if (accessToken) return { accessToken };
+  return { error: parameters.get('error_description') ?? 'The password reset link is invalid or expired.' };
+}
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
   const [authEmail, setAuthEmail] = useState('');
@@ -65,6 +95,7 @@ export default function App() {
   const [receiptFromCamera, setReceiptFromCamera] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
+  const [passwordResetAccessToken, setPasswordResetAccessToken] = useState<string | null>(null);
   const [holderAccount, setHolderAccount] = useState<HolderAccount | null>(null);
   const [issuerProviders, setIssuerProviders] = useState<IssuerProvider[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
@@ -285,6 +316,23 @@ export default function App() {
     }
   }, []);
 
+  const handlePasswordRecoveryUrl = useCallback((url: string | null) => {
+    if (!url) return false;
+    const recovery = passwordRecoveryFromUrl(url);
+    if (!recovery) return false;
+
+    if (recovery.accessToken) {
+      setPasswordResetAccessToken(recovery.accessToken);
+      setLoginNotice(null);
+      setScreen('reset_password');
+    } else {
+      setPasswordResetAccessToken(null);
+      setLoginNotice(recovery.error ?? 'The password reset link is invalid or expired.');
+      setScreen('login');
+    }
+    return true;
+  }, []);
+
   useEffect(() => {
     let active = true;
     const removeInvalidationHandler = setSessionInvalidatedHandler((reason) => {
@@ -311,8 +359,14 @@ export default function App() {
       setScreen('login');
     });
 
-    void walletApi.hasStoredSession()
-      .then((hasSession) => {
+    const linkSubscription = Linking.addEventListener('url', ({ url }) => {
+      if (active) handlePasswordRecoveryUrl(url);
+    });
+
+    void Linking.getInitialURL()
+      .then(async (initialUrl) => {
+        if (!active || handlePasswordRecoveryUrl(initialUrl)) return;
+        const hasSession = await walletApi.hasStoredSession();
         if (!active) return;
         if (hasSession) void loadHolderState();
         else setScreen('welcome');
@@ -325,9 +379,10 @@ export default function App() {
 
     return () => {
       active = false;
+      linkSubscription.remove();
       removeInvalidationHandler();
     };
-  }, [loadHolderState]);
+  }, [handlePasswordRecoveryUrl, loadHolderState]);
 
   const walletEnabled = holderAccount?.accountStatus === 'active' && Boolean(holderAccount.confirmedAt);
   const pendingOffer = credentialOffers.find((offer) => offer.status === 'pending') ?? null;
@@ -600,7 +655,22 @@ export default function App() {
       case 'check_email':
         return <CheckEmailScreen email={authEmail} onReturnToLogin={() => setScreen('login')} />;
       case 'login':
-        return <LoginScreen initialEmail={authEmail} initialError={loginNotice} onBack={() => { setLoginNotice(null); setScreen('welcome'); }} onLoggedIn={() => { setLoginNotice(null); void loadHolderState(); }} onRegister={() => setScreen('registration')} />;
+        return <LoginScreen initialEmail={authEmail} initialError={loginNotice} onBack={() => { setLoginNotice(null); setScreen('welcome'); }} onLoggedIn={() => { setLoginNotice(null); void loadHolderState(); }} onRegister={() => setScreen('registration')} onForgotPassword={(email) => { setAuthEmail(email); setLoginNotice(null); setScreen('forgot_password'); }} />;
+      case 'forgot_password':
+        return <ForgotPasswordScreen initialEmail={authEmail} onBack={() => setScreen('login')} />;
+      case 'reset_password':
+        if (!passwordResetAccessToken) return <ForgotPasswordScreen initialEmail={authEmail} onBack={() => setScreen('login')} />;
+        return (
+          <ResetPasswordScreen
+            accessToken={passwordResetAccessToken}
+            onBack={() => { setPasswordResetAccessToken(null); setScreen('login'); }}
+            onComplete={() => {
+              setPasswordResetAccessToken(null);
+              setLoginNotice('Password updated. Log in with your new password.');
+              setScreen('login');
+            }}
+          />
+        );
       case 'identity_submission':
         return <IdentitySubmissionScreen onSubmitted={acceptOnboardingRequest} onBack={() => setScreen('wallet')} />;
       case 'onboarding_status':
@@ -807,7 +877,7 @@ export default function App() {
       default:
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
     }
-  }, [acceptOnboardingRequest, acceptPendingOffer, authEmail, continueAfterMatch, credentialValidity, currentUser, displayName, goWithShareProtection, hasCredential, holderAccount, issuedCredentialDisplay, issuerProviders, loadHolderState, loginNotice, offerAcceptanceError, offersError, offersLoading, onboardingRequest, pendingOffer, pinPurpose, profilePreferences, providersError, providersLoading, receiptFromCamera, recentActivity, refreshOnboarding, registeredName, requireBiometrics, resetWallet, retryCredentialOffers, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareError, shareFields, shareOrigin, shareProof, sharing, signOut, studentId, toggleBiometrics, walletEnabled]);
+  }, [acceptOnboardingRequest, acceptPendingOffer, authEmail, continueAfterMatch, credentialValidity, currentUser, displayName, goWithShareProtection, hasCredential, holderAccount, issuedCredentialDisplay, issuerProviders, loadHolderState, loginNotice, offerAcceptanceError, offersError, offersLoading, onboardingRequest, passwordResetAccessToken, pendingOffer, pinPurpose, profilePreferences, providersError, providersLoading, receiptFromCamera, recentActivity, refreshOnboarding, registeredName, requireBiometrics, resetWallet, retryCredentialOffers, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareError, shareFields, shareOrigin, shareProof, sharing, signOut, studentId, toggleBiometrics, walletEnabled]);
 
   return (
     <SafeAreaProvider>
