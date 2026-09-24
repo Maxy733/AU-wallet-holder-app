@@ -25,6 +25,19 @@
     },
     "plugins": [
       "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow AU Wallet to use Face ID before sharing a credential."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AU Wallet to scan QR codes with your camera.",
+          "recordAudioAndroid": false
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-image-picker",

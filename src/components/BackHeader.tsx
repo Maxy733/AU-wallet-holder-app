@@ -4,7 +4,7 @@ import { styles as themeStyles } from '../theme/styles';
 
 type BackHeaderProps = {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   onBack: () => void;
 };
 
@@ -14,9 +14,9 @@ export function BackHeader({ title, subtitle, onBack }: BackHeaderProps) {
       <Pressable style={themeStyles.backButton} onPress={onBack}>
         <Text style={themeStyles.backArrow}>←</Text>
       </Pressable>
-      <View>
+      <View style={!subtitle && themeStyles.backSingleLineTitle}>
         <Text style={themeStyles.backTitle}>{title}</Text>
-        <Text style={themeStyles.backSub}>{subtitle}</Text>
+        {subtitle ? <Text style={themeStyles.backSub}>{subtitle}</Text> : null}
       </View>
     </View>
   );

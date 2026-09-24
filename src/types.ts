@@ -10,6 +10,7 @@ export type Screen =
   | 'create_pin' // NEW: Setup 6-digit passcode
   | 'verifying' // NEW: Loading spinner status panel
   | 'wallet'
+  | 'camera'
   | 'trusted_services'
   | 'offer'
   | 'success'
@@ -27,14 +28,14 @@ export type ShareFields = {
   major: boolean;
   graduation: boolean;
   gpa: boolean;
-  standing: boolean;
 };
 
 export type HistoryEvent = {
   id: string;
-  type: 'share' | 'issue';
+  type: 'share' | 'issue' | 'offer' | 'revoke';
   title: string;
   subtitle: string;
   targetScreen: Screen;
   sharedFields?: ShareFields;
+  fromCamera?: boolean;
 };

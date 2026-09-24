@@ -75,3 +75,11 @@ export async function loadIssuedCredential(userId: string): Promise<StoredIssued
     return null;
   }
 }
+
+export async function deleteIssuedCredential(userId: string): Promise<void> {
+  const storageKey = credentialStorageKey(userId);
+  if (await SecureStore.isAvailableAsync()) {
+    await SecureStore.deleteItemAsync(storageKey);
+  }
+  memoryOnlyCredentials.delete(storageKey);
+}
