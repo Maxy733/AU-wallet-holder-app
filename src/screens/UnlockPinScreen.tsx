@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { InputAccessoryView, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { InputAccessoryView, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { PrimaryButton } from '../components';
 import { verifyWalletPin } from '../lib/walletSecurity';
@@ -26,7 +26,11 @@ export function UnlockPinScreen({
   const submittingRef = useRef(false);
   const actionLabel = loading ? 'Checking...' : purpose === 'share' ? 'Confirm PIN' : 'Unlock';
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+    const keyboardHidden = Keyboard.addListener('keyboardDidHide', () => inputRef.current?.blur());
+    return () => keyboardHidden.remove();
+  }, []);
 
   const unlock = async (pinToVerify = pin) => {
     if (submittingRef.current || pinToVerify.length !== 6) return;
@@ -62,7 +66,6 @@ export function UnlockPinScreen({
 
   return (
     <View style={themeStyles.screen}>
-      <TextInput ref={inputRef} style={styles.hiddenInput} value={pin} onChangeText={updatePin} maxLength={6} keyboardType="number-pad" inputAccessoryViewID={Platform.OS === 'ios' ? PIN_ACCESSORY_ID : undefined} autoFocus />
       <KeyboardAvoidingView
         style={styles.keyboardAvoider}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -74,6 +77,22 @@ export function UnlockPinScreen({
             {Array.from({ length: 6 }).map((_, index) => (
               <View key={index} style={[styles.pinBox, error && styles.pinBoxError]}>{pin[index] ? <View style={styles.pinDot} /> : null}</View>
             ))}
+            <TextInput
+              ref={inputRef}
+              style={styles.pinInput}
+              value={pin}
+              onChangeText={updatePin}
+              maxLength={6}
+              keyboardType="number-pad"
+              inputAccessoryViewID={Platform.OS === 'ios' ? PIN_ACCESSORY_ID : undefined}
+              accessibilityLabel="Wallet PIN"
+              autoComplete="off"
+              caretHidden
+              contextMenuHidden
+              selection={{ start: pin.length, end: pin.length }}
+              underlineColorAndroid="transparent"
+              autoFocus
+            />
           </Pressable>
         </View>
         {Platform.OS !== 'ios' ? (
@@ -97,7 +116,7 @@ export function UnlockPinScreen({
 
 const styles = StyleSheet.create({
   keyboardAvoider: { flex: 1 },
-  hiddenInput: { position: 'absolute', width: 1, height: 1, opacity: 0 },
+  pinInput: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: 1, color: 'transparent', backgroundColor: 'transparent', opacity: 0.01 },
   content: { flex: 1, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', paddingBottom: 80 },
   actions: { paddingHorizontal: 20, paddingBottom: 16 },
   keyboardAccessory: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10, backgroundColor: colors.bg },

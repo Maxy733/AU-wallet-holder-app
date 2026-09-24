@@ -174,7 +174,7 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   credentialCard: {
-    height: 190,
+    height: 199,
     borderRadius: 22,
     padding: 20,
     overflow: 'hidden',
@@ -185,7 +185,6 @@ export const styles = StyleSheet.create({
     elevation: 8,
   },
   credentialCardCompact: {
-    height: 199,
     marginTop: 8,
   },
   emptyWallet: {
@@ -450,6 +449,10 @@ export const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 14.5,
     fontWeight: '700',
+  },
+  backSingleLineTitle: {
+    minHeight: 34,
+    justifyContent: 'center',
   },
   backSub: {
     marginTop: 3,

@@ -5,6 +5,8 @@ import { colors } from '../theme/constants';
 import { copy } from '../theme/mockData';
 import { styles as themeStyles } from '../theme/styles'; // <-- Import your centralized styles
 
+export type CredentialValidity = 'active' | 'invalid' | 'unknown';
+
 const shortGraduationDate = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
   if (!match) return value;
@@ -24,6 +26,7 @@ export function CredentialCard({
   gpa = copy.gpa,
   graduationDate = copy.graduationDisplay,
   issuerName = 'Assumption University',
+  validity = 'unknown',
 }: {
   compact?: boolean;
   holderName?: string;
@@ -32,6 +35,7 @@ export function CredentialCard({
   gpa?: string | number;
   graduationDate?: string;
   issuerName?: string;
+  validity?: CredentialValidity;
 }) {
   return (
     <LinearGradient
@@ -48,8 +52,8 @@ export function CredentialCard({
           <Text style={themeStyles.auSealText}>AU</Text>
         </View>
         <View style={themeStyles.activePill}>
-          <Text style={themeStyles.activeDot}>●</Text>
-          <Text style={themeStyles.activeText}>ACTIVE</Text>
+          <Text style={[themeStyles.activeDot, validity !== 'active' && { color: colors.card }]}>●</Text>
+          <Text style={themeStyles.activeText}>{validity === 'active' ? 'ACTIVE' : validity === 'invalid' ? 'INVALID' : 'UNKNOWN'}</Text>
         </View>
       </View>
       <Text style={themeStyles.cardEyebrow}>EDUCATION TRANSCRIPT · VC</Text>

@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import type { CredentialOffer, IssuerProvider } from '../api';
 import { Header, IssuerProviderCard, SecondaryButton, SectionLabel } from '../components';
-import { CredentialCard } from '../components/CredentialCard';
+import { CredentialCard, type CredentialValidity } from '../components/CredentialCard';
 import { Notice } from '../components/Notice';
 import type { IssuedCredentialDisplay } from '../lib/credentialStore';
 import { colors } from '../theme/constants';
@@ -27,6 +27,7 @@ export function WalletScreen({
   holderName,
   profilePhotoUri,
   credential,
+  credentialValidity,
 }: {
   go: (screen: Screen) => void;
   hasCredential: boolean;
@@ -44,6 +45,7 @@ export function WalletScreen({
   holderName: string;
   profilePhotoUri: string | null;
   credential: IssuedCredentialDisplay | null;
+  credentialValidity: CredentialValidity;
 }) {
   const assumptionUniversity = issuerProviders.find(
     (provider) => provider.issuerCode === 'assumption-university',
@@ -57,6 +59,7 @@ export function WalletScreen({
         {hasCredential ? (
           <Pressable onPress={() => go('credential')}>
             <CredentialCard
+              validity={credentialValidity}
               degree={credential?.degree || 'Not provided'}
               major={credential?.major || 'Not provided'}
               graduationDate={credential?.graduationDate || 'Not provided'}
@@ -78,10 +81,17 @@ export function WalletScreen({
           </View>
         )}
 
-        <SectionLabel>TRUSTED SERVICES</SectionLabel>
-        <Text style={styles.serviceIntro}>
-          Choose a provider to connect with your personal wallet. Provider verification happens only after you choose to connect.
-        </Text>
+        <View style={styles.servicesHeadingRow}>
+          <SectionLabel>TRUSTED SERVICES</SectionLabel>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="See more trusted services"
+            onPress={() => go('trusted_services')}
+            style={({ pressed }) => [styles.seeMoreLink, pressed && styles.servicePressed]}
+          >
+            <Text style={styles.seeMoreText}>See More</Text>
+          </Pressable>
+        </View>
 
         {providersLoading ? (
           <View style={styles.providerMessage}>
@@ -99,20 +109,10 @@ export function WalletScreen({
           <Text style={styles.providerError}>Assumption University is not currently listed by the wallet backend.</Text>
         )}
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityHint="Opens the issuer provider catalogue"
-          onPress={() => go('trusted_services')}
-          style={({ pressed }) => [styles.seeMoreButton, pressed && styles.servicePressed]}
-        >
-          <Text style={styles.seeMoreText}>See more services</Text>
-          <Text style={styles.seeMoreIcon}>›</Text>
-        </Pressable>
-
         {!walletEnabled ? (
           <View style={styles.lockedPanel}>
             <Text style={styles.lockedTitle}>Wallet features are locked</Text>
-            <Text style={styles.lockedBody}>Connect and verify with Assumption University to enable credentials, sharing and activity history.</Text>
+            <Text style={styles.lockedBody}>Connect and verify with Assumption University to enable credentials, sharing and notifications.</Text>
             <View style={styles.signOutAction}><SecondaryButton label="Sign out" onPress={onSignOut} /></View>
           </View>
         ) : pendingOffer ? (
@@ -148,15 +148,14 @@ export function WalletScreen({
 }
 
 const styles = StyleSheet.create({
-  serviceIntro: { marginTop: -5, marginBottom: 12, color: colors.muted, fontSize: 12, lineHeight: 18 },
+  servicesHeadingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   servicePressed: { opacity: 0.68 },
   providerMessage: { marginBottom: 10, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.border, borderRadius: 18, backgroundColor: colors.card, alignItems: 'center' },
   providerMessageText: { color: colors.muted, fontSize: 12 },
   providerError: { marginBottom: 10, color: colors.red, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   offerRefresh: { marginTop: 4 },
-  seeMoreButton: { minHeight: 44, marginBottom: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  seeMoreLink: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
   seeMoreText: { color: colors.red, fontSize: 12, fontWeight: '800' },
-  seeMoreIcon: { color: colors.red, fontSize: 20, fontWeight: '500' },
   lockedPanel: { marginTop: 12, padding: 16, borderRadius: 18, backgroundColor: colors.softRed },
   lockedTitle: { color: colors.redDark, fontSize: 14, fontWeight: '800' },
   lockedBody: { marginTop: 6, color: colors.muted, fontSize: 11.5, lineHeight: 17 },

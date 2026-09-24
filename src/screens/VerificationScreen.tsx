@@ -2,15 +2,28 @@ import React from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { BackHeader, InfoPanel, PrimaryButton } from '../components';
 import { QrMock } from '../components/QrMock';
+import type { IssuedCredentialDisplay } from '../lib/credentialStore';
 import { colors } from '../theme/constants';
-import { copy } from '../theme/mockData';
 import { styles as themeStyles } from '../theme/styles';
-import { Screen } from '../types';
+import { Screen, ShareFields } from '../types';
 
-export function VerificationScreen({ go }: { go: (screen: Screen) => void }) {
+const displayValue = (value: string | number | undefined) => {
+  if (value === undefined || (typeof value === 'string' && !value.trim())) return 'Not provided';
+  return String(value);
+};
+
+export function VerificationScreen({
+  go,
+  sharedFields,
+  credential,
+}: {
+  go: (screen: Screen) => void;
+  sharedFields: ShareFields;
+  credential: IssuedCredentialDisplay | null;
+}) {
   return (
     <View style={themeStyles.screen}>
-      <BackHeader title="Verification result" subtitle="Employer A portal view" onBack={() => go('share')} />
+      <BackHeader title="Verification result" onBack={() => go('share')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
         <View style={styles.validBanner}>
           <View style={styles.validIcon}><Text style={styles.validCheck}>✓</Text></View>
@@ -24,11 +37,10 @@ export function VerificationScreen({ go }: { go: (screen: Screen) => void }) {
         <InfoPanel
           title="Disclosed fields"
           rows={[
-            ['Degree', copy.degree],
-            ['Major', copy.major],
-            ['Graduation', copy.graduationISO],
-            ['GPA', 'Hidden'],
-            ['Standing', 'Hidden'],
+            ['Degree', sharedFields.degree ? displayValue(credential?.degree) : 'Hidden'],
+            ['Major', sharedFields.major ? displayValue(credential?.major) : 'Hidden'],
+            ['Graduation', sharedFields.graduation ? displayValue(credential?.graduationDate) : 'Hidden'],
+            ['GPA', sharedFields.gpa ? displayValue(credential?.gpa) : 'Hidden'],
           ]}
         />
         <InfoPanel title="Trust chain">

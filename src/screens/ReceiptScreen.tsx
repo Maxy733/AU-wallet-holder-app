@@ -1,15 +1,30 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { BackHeader, PrimaryButton } from '../components';
-import { copy } from '../theme/mockData';
+import type { IssuedCredentialDisplay } from '../lib/credentialStore';
 import { styles as themeStyles } from '../theme/styles';
-import { Screen } from '../types';
+import { Screen, ShareFields } from '../types';
 import { InfoPanel } from '../components/InfoPanel';
 
-export function ReceiptScreen({ go }: { go: (screen: Screen) => void }) {
+const displayValue = (value: string | number | undefined) => {
+  if (value === undefined || (typeof value === 'string' && !value.trim())) return 'Not provided';
+  return String(value);
+};
+
+export function ReceiptScreen({
+  go,
+  sharedFields,
+  credential,
+  onDone,
+}: {
+  go: (screen: Screen) => void;
+  sharedFields: ShareFields;
+  credential: IssuedCredentialDisplay | null;
+  onDone?: () => void;
+}) {
   return (
     <View style={themeStyles.screen}>
-      <BackHeader title="Disclosure Receipt" subtitle="Shared with Employer A" onBack={() => go('history')} />
+      <BackHeader title="Disclosure Receipt" onBack={() => go('history')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
         <InfoPanel
           title="Transaction Summary"
@@ -21,13 +36,27 @@ export function ReceiptScreen({ go }: { go: (screen: Screen) => void }) {
         />
         <InfoPanel
           title="Selective Disclosure Receipt"
-          rows={[['Degree', copy.degree], ['Major', copy.major], ['Graduation', copy.graduationISO]]}
+          rows={[
+            ['Degree', sharedFields.degree ? displayValue(credential?.degree) : 'Hidden'],
+            ['Major', sharedFields.major ? displayValue(credential?.major) : 'Hidden'],
+            ['Graduation', sharedFields.graduation ? displayValue(credential?.graduationDate) : 'Hidden'],
+            ['GPA', sharedFields.gpa ? displayValue(credential?.gpa) : 'Hidden'],
+          ]}
         />
         <InfoPanel
           title="Cryptographic Metadata"
-          rows={[['Transaction ID', '0xabc...789'], ['Signature', '0x123...def'], ['Timestamp', '1672531200']]}
+          rows={[
+            ['Transaction ID', '0xabc...789'],
+            ['Signature', '0x123...def'],
+            ['Timestamp', '1672531200'],
+          ]}
         />
       </ScrollView>
+      {onDone ? (
+        <View style={themeStyles.actionStack}>
+          <PrimaryButton label="Done" onPress={onDone} />
+        </View>
+      ) : null}
     </View>
   );
 }

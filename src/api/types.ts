@@ -97,7 +97,7 @@ export type IssuerProvider = {
   connectionStatus: IssuerConnectionStatus;
 };
 
-export type CredentialOfferStatus = 'pending' | 'issued' | 'declined';
+export type CredentialOfferStatus = 'pending' | 'issued' | 'declined' | 'revoked';
 
 export type AcademicTranscriptPreview = {
   degree: string;

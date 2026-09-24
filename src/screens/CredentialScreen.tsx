@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 import { BackHeader } from '../components/BackHeader';
 import { InfoPanel } from '../components/InfoPanel';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { CredentialCard } from '../components/CredentialCard';
+import { CredentialCard, type CredentialValidity } from '../components/CredentialCard';
 import type { IssuedCredentialDisplay } from '../lib/credentialStore';
 import { styles as themeStyles } from '../theme/styles';
 import { Screen } from '../types';
@@ -18,20 +18,23 @@ export function CredentialScreen({
   holderName,
   studentId,
   credential,
+  credentialValidity,
 }: {
   go: (screen: Screen) => void;
   holderName: string;
   studentId: string;
   credential: IssuedCredentialDisplay | null;
+  credentialValidity: CredentialValidity;
 }) {
   const displayedHolderName = credential?.holderName || holderName;
   const displayedStudentId = credential?.studentNumber || studentId;
 
   return (
     <View style={themeStyles.screen}>
-      <BackHeader title="Education Transcript VC" subtitle="Stored · ready for verification" onBack={() => go('wallet')} />
+      <BackHeader title="Education Transcript VC" subtitle={credentialValidity === 'active' ? 'Stored · ready for verification' : credentialValidity === 'invalid' ? 'Stored · revoked by issuer' : 'Stored · status unavailable'} onBack={() => go('wallet')} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.detailContent}>
         <CredentialCard
+          validity={credentialValidity}
           compact
           holderName={displayedHolderName}
           degree={displayValue(credential?.degree)}
@@ -54,13 +57,13 @@ export function CredentialScreen({
           title="Metadata"
           rows={[
             ['Issuer DID', displayValue(credential?.issuerDid)],
-            ['Status', 'Active'],
+            ['Status', credentialValidity === 'active' ? 'Active' : credentialValidity === 'invalid' ? 'Invalid (revoked)' : 'Unknown'],
             ['Storage', 'Permanent'],
           ]}
         />
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label="Use for job application" onPress={() => go('share')} />
+        <PrimaryButton label="Use for job application" onPress={() => go('share')} disabled={credentialValidity !== 'active'} />
       </View>
     </View>
   );
