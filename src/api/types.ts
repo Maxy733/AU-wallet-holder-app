@@ -153,6 +153,8 @@ export interface WalletBackendApi {
   hasStoredSession(): Promise<boolean>;
   register(input: RegistrationInput): Promise<RegistrationResult>;
   resendConfirmation(email: string): Promise<void>;
+  forgotPassword(email: string, redirectTo?: string): Promise<void>;
+  completePasswordReset(accessToken: string, password: string): Promise<void>;
   login(input: LoginInput): Promise<AuthSession>;
   refresh(): Promise<AuthSession>;
   logout(): Promise<void>;

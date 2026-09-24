@@ -4,6 +4,8 @@ export type Screen =
   | 'registration'
   | 'check_email'
   | 'login'
+  | 'forgot_password'
+  | 'reset_password'
   | 'identity_submission'
   | 'onboarding_status'
   | 'unlock_pin'

@@ -81,6 +81,14 @@ class MockWalletApi implements WalletBackendApi {
     await wait();
   }
 
+  async forgotPassword(_email?: string, _redirectTo?: string) {
+    await wait();
+  }
+
+  async completePasswordReset() {
+    await wait();
+  }
+
   async login(input: LoginInput): Promise<AuthSession> {
     await wait();
     this.email = input.email.trim().toLowerCase();
