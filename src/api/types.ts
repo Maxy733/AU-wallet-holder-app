@@ -117,6 +117,8 @@ export type CredentialOffer = {
   status: CredentialOfferStatus;
   createdAt: string;
   credentialIssuer?: string;
+  revocationReason?: string | null;
+  revokedAt?: string | null;
   nonce?: string;
   preview: AcademicTranscriptPreview;
 };

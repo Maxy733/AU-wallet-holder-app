@@ -1,19 +1,25 @@
-import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, AppState, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import type { CredentialOffer, IssuerProvider } from '../api';
+import type { IssuerProvider } from '../api';
 import { Header, IssuerProviderCard, SecondaryButton, SectionLabel } from '../components';
 import { CredentialCard, type CredentialValidity } from '../components/CredentialCard';
 import { Notice } from '../components/Notice';
 import type { IssuedCredentialDisplay } from '../lib/credentialStore';
 import { colors } from '../theme/constants';
 import { styles as themeStyles } from '../theme/styles';
-import { Screen } from '../types';
+import type { HistoryEvent, Screen } from '../types';
+
+function localGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'GOOD MORNING';
+  if (hour < 18) return 'GOOD AFTERNOON';
+  return 'GOOD EVENING';
+}
 
 export function WalletScreen({
   go,
   hasCredential,
-  pendingOffer,
   offersLoading,
   offersError,
   walletEnabled,
@@ -28,10 +34,12 @@ export function WalletScreen({
   profilePhotoUri,
   credential,
   credentialValidity,
+  recentActivity,
+  onSelectActivity,
+  hasUnreadNotifications,
 }: {
   go: (screen: Screen) => void;
   hasCredential: boolean;
-  pendingOffer: CredentialOffer | null;
   offersLoading: boolean;
   offersError: string | null;
   walletEnabled: boolean;
@@ -39,22 +47,67 @@ export function WalletScreen({
   providersLoading: boolean;
   providersError: string | null;
   onRetryProviders: () => void;
-  onRetryOffers: () => void;
+  onRetryOffers: () => Promise<void>;
   onSelectIssuer: (provider: IssuerProvider) => void;
   onSignOut: () => void;
   holderName: string;
   profilePhotoUri: string | null;
   credential: IssuedCredentialDisplay | null;
   credentialValidity: CredentialValidity;
+  recentActivity: HistoryEvent[];
+  onSelectActivity: (event: HistoryEvent) => void;
+  hasUnreadNotifications: boolean;
 }) {
+  const [greeting, setGreeting] = useState(localGreeting);
+  useEffect(() => {
+    const updateGreeting = () => setGreeting(localGreeting());
+    const timer = setInterval(updateGreeting, 60_000);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') updateGreeting();
+    });
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, []);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshOffers = async () => {
+    if (refreshing || !walletEnabled) return;
+    setRefreshing(true);
+    try {
+      await onRetryOffers();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const assumptionUniversity = issuerProviders.find(
     (provider) => provider.issuerCode === 'assumption-university',
   );
 
   return (
     <View style={themeStyles.screen}>
-      <Header eyebrow="GOOD AFTERNOON" title={holderName} avatarUri={profilePhotoUri} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={themeStyles.scrollBottom}>
+      <Header
+        eyebrow={greeting}
+        title={holderName}
+        avatarUri={profilePhotoUri}
+        onOpenNotifications={walletEnabled ? () => go('notifications') : undefined}
+        hasUnreadNotifications={hasUnreadNotifications}
+      />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={themeStyles.scrollBottom}
+        alwaysBounceVertical
+        refreshControl={walletEnabled ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refreshOffers()}
+            colors={[colors.red]}
+            tintColor={colors.red}
+          />
+        ) : undefined}
+      >
         <SectionLabel>YOUR CREDENTIALS</SectionLabel>
         {hasCredential ? (
           <Pressable onPress={() => go('credential')}>
@@ -109,24 +162,41 @@ export function WalletScreen({
           <Text style={styles.providerError}>Assumption University is not currently listed by the wallet backend.</Text>
         )}
 
+        {walletEnabled ? (
+          <View>
+            <View style={styles.servicesHeadingRow}>
+              <SectionLabel>RECENT ACTIVITY</SectionLabel>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="View all notifications"
+                onPress={() => go('notifications')}
+                style={({ pressed }) => [styles.seeMoreLink, pressed && styles.servicePressed]}
+              >
+                <Text style={styles.seeMoreText}>View all</Text>
+              </Pressable>
+            </View>
+            {recentActivity.length === 0 ? (
+              <Text style={themeStyles.smallBody}>No notifications yet. Credential and sharing updates will appear here.</Text>
+            ) : recentActivity.slice(0, 3).map((event) => (
+              <Notice
+                key={event.id}
+                icon={event.type === 'revoke' ? '!' : event.type === 'offer' ? 'AU' : '✓'}
+                tint={event.type === 'offer' || event.type === 'revoke' ? colors.red : colors.green}
+                bg={event.type === 'offer' || event.type === 'revoke' ? colors.softRed : '#E5F7EC'}
+                title={String(event.title ?? '')}
+                subtitle={String(event.subtitle ?? '')}
+                onPress={() => onSelectActivity(event)}
+              />
+            ))}
+          </View>
+        ) : null}
+
         {!walletEnabled ? (
           <View style={styles.lockedPanel}>
             <Text style={styles.lockedTitle}>Wallet features are locked</Text>
             <Text style={styles.lockedBody}>Connect and verify with Assumption University to enable credentials, sharing and notifications.</Text>
             <View style={styles.signOutAction}><SecondaryButton label="Sign out" onPress={onSignOut} /></View>
           </View>
-        ) : pendingOffer ? (
-          <>
-            <SectionLabel>PENDING</SectionLabel>
-            <Notice
-              icon="AU"
-              tint={colors.red}
-              bg={colors.softRed}
-              title={`${pendingOffer.issuerName} wants to issue a credential`}
-              subtitle={`${pendingOffer.displayName} - tap to review`}
-              onPress={() => go('offer')}
-            />
-          </>
         ) : offersLoading ? (
           <View style={styles.providerMessage}>
             <ActivityIndicator size="small" color={colors.red} />
@@ -137,11 +207,7 @@ export function WalletScreen({
             <Text style={styles.providerError}>{offersError}</Text>
             <SecondaryButton label="Try again" onPress={onRetryOffers} />
           </View>
-        ) : (
-          <View style={styles.offerRefresh}>
-            <SecondaryButton label="Refresh offers" onPress={onRetryOffers} />
-          </View>
-        )}
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -153,7 +219,6 @@ const styles = StyleSheet.create({
   providerMessage: { marginBottom: 10, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.border, borderRadius: 18, backgroundColor: colors.card, alignItems: 'center' },
   providerMessageText: { color: colors.muted, fontSize: 12 },
   providerError: { marginBottom: 10, color: colors.red, fontSize: 12, lineHeight: 18, textAlign: 'center' },
-  offerRefresh: { marginTop: 4 },
   seeMoreLink: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
   seeMoreText: { color: colors.red, fontSize: 12, fontWeight: '800' },
   lockedPanel: { marginTop: 12, padding: 16, borderRadius: 18, backgroundColor: colors.softRed },
