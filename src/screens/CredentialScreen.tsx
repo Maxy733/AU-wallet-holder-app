@@ -46,6 +46,7 @@ export function CredentialScreen({
         <InfoPanel
           title="Credential claims"
           rows={[
+            ['Student name', displayValue(credential?.holderName)],
             ['Student ID', displayedStudentId],
             ['Degree', displayValue(credential?.degree)],
             ['Major', displayValue(credential?.major)],
@@ -53,17 +54,13 @@ export function CredentialScreen({
             ['GPA', displayValue(credential?.gpa)],
           ]}
         />
-        <InfoPanel
-          title="Metadata"
-          rows={[
-            ['Issuer DID', displayValue(credential?.issuerDid)],
-            ['Status', credentialValidity === 'active' ? 'Active' : credentialValidity === 'invalid' ? 'Invalid (revoked)' : 'Unknown'],
-            ['Storage', 'Permanent'],
-          ]}
-        />
       </ScrollView>
       <View style={themeStyles.actionStack}>
-        <PrimaryButton label="Use for job application" onPress={() => go('share')} disabled={credentialValidity !== 'active'} />
+        <PrimaryButton
+          label={credentialValidity === 'invalid' ? 'Next' : 'Share VC'}
+          onPress={() => go(credentialValidity === 'invalid' ? 'revoked_vc' : 'share')}
+          disabled={credentialValidity === 'unknown'}
+        />
       </View>
     </View>
   );

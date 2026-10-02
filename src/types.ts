@@ -17,10 +17,13 @@ export type Screen =
   | 'offer'
   | 'success'
   | 'credential'
+  | 'revoked_vc'
+  | 'contact_support'
   | 'share'
   | 'verification'
   | 'receipt'
   | 'history'
+  | 'notifications'
   | 'settings'
   | 'edit_profile'
   | 'linked_issuer';
@@ -34,6 +37,7 @@ export type ShareFields = {
 
 export type HistoryEvent = {
   id: string;
+  occurredAt: string;
   type: 'share' | 'issue' | 'offer' | 'revoke';
   title: string;
   subtitle: string;

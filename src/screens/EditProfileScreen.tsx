@@ -9,12 +9,14 @@ import { styles as themeStyles } from '../theme/styles';
 
 export function EditProfileScreen({
   officialName,
+  personalEmail,
   initialNickname,
   initialPhotoUri,
   onSave,
   onBack,
 }: {
   officialName: string;
+  personalEmail: string;
   initialNickname: string;
   initialPhotoUri: string | null;
   onSave: (draft: ProfilePreferenceDraft) => Promise<void>;
@@ -119,6 +121,10 @@ export function EditProfileScreen({
             <Text style={styles.officialLabel}>REGISTERED NAME</Text>
             <Text style={styles.officialName}>{officialName}</Text>
             <Text style={styles.officialHelp}>Credential offers, official credentials, and issuer records continue to use this name.</Text>
+            <View style={styles.emailGroup}>
+              <Text style={styles.officialLabel}>PERSONAL EMAIL</Text>
+              <Text selectable style={styles.emailValue}>{personalEmail || 'Not provided'}</Text>
+            </View>
           </View>
 
           {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
@@ -147,6 +153,8 @@ const styles = StyleSheet.create({
   officialPanel: { marginVertical: 22, padding: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 18, backgroundColor: colors.card },
   officialLabel: { color: colors.muted, fontSize: 9.5, fontWeight: '800', letterSpacing: 1.1 },
   officialName: { marginTop: 6, color: colors.ink, fontSize: 16, fontWeight: '800' },
+  emailGroup: { marginTop: 18 },
+  emailValue: { marginTop: 6, color: colors.ink, fontSize: 14, lineHeight: 21, fontWeight: '600' },
   officialHelp: { marginTop: 7, color: colors.muted, fontSize: 11.5, lineHeight: 17 },
   error: { marginBottom: 14, color: colors.red, fontSize: 12.5, lineHeight: 18, textAlign: 'center' },
 });

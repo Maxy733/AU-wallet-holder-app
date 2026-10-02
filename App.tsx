@@ -24,9 +24,11 @@ import {
   type IssuedCredentialDisplay,
   loadIssuedCredential,
   saveIssuedCredential,
+  recordCredentialRevocation,
 } from './src/lib/credentialStore';
 import { createCredentialOfferProof } from './src/lib/holderProof';
-import { loadReadNotificationIds, saveReadNotificationIds } from './src/lib/offerNotificationStore';
+import { appendSharingHistory, loadSharingHistory } from './src/lib/sharingHistoryStore';
+import { loadReadNotificationIds, saveReadNotificationIds, loadRevocationTimes, saveRevocationTimes } from './src/lib/offerNotificationStore';
 import { loadProfilePreferences, ProfilePreferences, saveProfilePreferences } from './src/lib/profilePreferences';
 import { hasWalletPin, saveWalletPin } from './src/lib/walletSecurity';
 import { CheckEmailScreen } from './src/screens/CheckEmailScreen';
@@ -42,6 +44,8 @@ import { LinkedIssuerScreen } from './src/screens/LinkedIssuerScreen';
 import { OfferScreen } from './src/screens/OfferScreen';
 import { OnboardingStatusScreen } from './src/screens/OnboardingStatusScreen';
 import { ReceiptScreen } from './src/screens/ReceiptScreen';
+import { RevokedVcScreen } from './src/screens/RevokedVcScreen';
+import { ContactSupportScreen } from './src/screens/ContactSupportScreen';
 import { RegistrationScreen } from './src/screens/RegistrationScreen';
 import { ResetPasswordScreen } from './src/screens/ResetPasswordScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
@@ -106,6 +110,7 @@ export default function App() {
   const [offerAcceptanceError, setOfferAcceptanceError] = useState<string | null>(null);
   const [hasCredential, setHasCredential] = useState(false);
   const [credentialValidity, setCredentialValidity] = useState<CredentialValidity>('unknown');
+  const [credentialRevocationReason, setCredentialRevocationReason] = useState<string | null>(null);
   const [issuedCredentialDisplay, setIssuedCredentialDisplay] = useState<IssuedCredentialDisplay | null>(null);
   const [requireBiometrics, setRequireBiometrics] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -119,6 +124,7 @@ export default function App() {
   const [history, setHistory] = useState<HistoryEvent[]>([]);
   const [hasUnreadActivity, setHasUnreadActivity] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+  const [revocationTimes, setRevocationTimes] = useState<Record<string, string>>({});
   const [receiptFields, setReceiptFields] = useState<ShareFields>({
     degree: true,
     major: true,
@@ -146,24 +152,47 @@ export default function App() {
     setOffersLoading(true);
     setOffersError(null);
     try {
-      const [offers, storedCredential, savedReadNotificationIds] = await Promise.all([
+      const [offers, storedCredential, savedReadNotificationIds, savedRevocationTimes] = await Promise.all([
         walletApi.getMyCredentialOffers(),
         currentUser ? loadIssuedCredential(currentUser.authUserId) : Promise.resolve(null),
         currentUser ? loadReadNotificationIds(currentUser.authUserId).catch(() => []) : Promise.resolve([]),
+        currentUser ? loadRevocationTimes(currentUser.authUserId).catch(() => ({})) : Promise.resolve({}),
       ]);
       const matchingOffer = storedCredential
         ? offers.find((offer) => offer.offerId === storedCredential.offerId)
         : null;
       const display = storedCredential?.display ?? (matchingOffer ? credentialDisplayFromOffer(matchingOffer) : null);
       if (generation !== credentialLoadGeneration.current) return;
+      if (currentUser && storedCredential && matchingOffer?.status === 'revoked') {
+        await recordCredentialRevocation(currentUser.authUserId, storedCredential.offerId, matchingOffer.revocationReason).catch(() => {});
+        if (generation !== credentialLoadGeneration.current) return;
+      }
+      const nextRevocationTimes: Record<string, string> = { ...savedRevocationTimes };
+      const detectedAt = new Date().toISOString();
+      let hasNewRevocation = false;
+      for (const offer of offers) {
+        if (offer.status === 'revoked' && !nextRevocationTimes[offer.offerId]) {
+          nextRevocationTimes[offer.offerId] = detectedAt;
+          hasNewRevocation = true;
+        }
+      }
+      if (hasNewRevocation && currentUser) {
+        void saveRevocationTimes(currentUser.authUserId, nextRevocationTimes).catch(() => {});
+      }
+      setRevocationTimes(nextRevocationTimes);
       setCredentialOffers(offers);
+      setCredentialRevocationReason(
+        matchingOffer?.status === 'revoked'
+          ? matchingOffer.revocationReason?.trim() || storedCredential?.revocationReason || null
+          : storedCredential?.revoked ? storedCredential.revocationReason || null : null,
+      );
       setReadNotificationIds(savedReadNotificationIds);
       setIssuedCredentialDisplay(display);
       setHasCredential(Boolean(storedCredential));
       setCredentialValidity(
         !storedCredential ? 'unknown'
+          : storedCredential.revoked || matchingOffer?.status === 'revoked' ? 'invalid'
           : matchingOffer?.status === 'issued' ? 'active'
-          : matchingOffer?.status === 'revoked' ? 'invalid'
           : 'unknown',
       );
     } catch (error) {
@@ -176,7 +205,8 @@ export default function App() {
       setCredentialOffers([]);
       setIssuedCredentialDisplay(storedCredential?.display ?? null);
       setHasCredential(Boolean(storedCredential));
-      setCredentialValidity('unknown');
+      setCredentialValidity(storedCredential?.revoked ? 'invalid' : 'unknown');
+      setCredentialRevocationReason(storedCredential?.revoked ? storedCredential.revocationReason || null : null);
       setOffersError('Could not load credential offers. Check the connection and try again.');
     } finally {
       if (generation === credentialLoadGeneration.current) setOffersLoading(false);
@@ -204,15 +234,23 @@ export default function App() {
     setSetupError(null);
     try {
       const me = await walletApi.getAuthMe();
-      const [holder, savedProfilePreferences, savedRequireBiometrics] = await Promise.all([
+      const [holder, savedProfilePreferences, savedRequireBiometrics, storedCredential, savedSharingHistory] = await Promise.all([
         walletApi.getHolderAccount(),
         loadProfilePreferences(me.authUserId).catch(() => ({ nickname: '', photoUri: null })),
         loadRequireBiometrics(me.authUserId),
+        loadIssuedCredential(me.authUserId),
+        loadSharingHistory(me.authUserId),
       ]);
       if (me.role !== 'student' || !me.holderAccountId) {
         throw new BackendApiError('FORBIDDEN', 'This account cannot use the holder wallet.', 403);
       }
 
+      setHistory(savedSharingHistory);
+      // Restore the user's local wallet independently of the offers API.
+      setIssuedCredentialDisplay(storedCredential?.display ?? null);
+      setHasCredential(Boolean(storedCredential));
+      setCredentialValidity(storedCredential?.revoked ? 'invalid' : 'unknown');
+      setCredentialRevocationReason(storedCredential?.revoked ? storedCredential.revocationReason || null : null);
       setCurrentUser(me);
       setHolderAccount(holder);
       setProfilePreferences(savedProfilePreferences);
@@ -312,6 +350,7 @@ export default function App() {
       setHistory([]);
       setHasUnreadActivity(false);
       setReadNotificationIds([]);
+      setRevocationTimes({});
       setScreen('welcome');
     }
   }, []);
@@ -355,6 +394,7 @@ export default function App() {
       setHistory([]);
       setHasUnreadActivity(false);
       setReadNotificationIds([]);
+      setRevocationTimes({});
       setLoginNotice(sessionErrorMessage(reason));
       setScreen('login');
     });
@@ -389,10 +429,11 @@ export default function App() {
   const latestRevokedOffer = credentialOffers
     .filter((offer) => offer.status === 'revoked')
     .reduce<CredentialOffer | null>((latest, offer) =>
-      !latest || Date.parse(offer.createdAt) > Date.parse(latest.createdAt) ? offer : latest,
+      !latest || Date.parse(revocationTimes[offer.offerId] ?? offer.createdAt) > Date.parse(revocationTimes[latest.offerId] ?? latest.createdAt) ? offer : latest,
     null);
   const revocationNotifications: HistoryEvent[] = latestRevokedOffer ? [{
     id: `revoke-${latestRevokedOffer.offerId}`,
+    occurredAt: revocationTimes[latestRevokedOffer.offerId] ?? latestRevokedOffer.createdAt,
     type: 'revoke',
     title: 'Credential revoked',
     subtitle: `${latestRevokedOffer.displayName} from ${latestRevokedOffer.issuerName} is no longer valid`,
@@ -406,19 +447,21 @@ export default function App() {
   const hasUnreadNotifications = hasUnreadActivity || notificationIds.some((id) => !readNotificationIds.includes(id));
   const offerNotifications: HistoryEvent[] = pendingOffer ? [{
     id: `offer-${pendingOffer.offerId}`,
+    occurredAt: pendingOffer.createdAt,
     type: 'offer',
     title: 'New credential offer',
     subtitle: `${pendingOffer.displayName} from ${pendingOffer.issuerName} · Tap to review`,
     targetScreen: 'offer',
   }] : [];
-  const recentActivity: HistoryEvent[] = [...offerNotifications, ...revocationNotifications, ...history];
+  const recentActivity: HistoryEvent[] = [...offerNotifications, ...revocationNotifications, ...history]
+    .sort((a, b) => (Date.parse(b.occurredAt) || 0) - (Date.parse(a.occurredAt) || 0));
   const registeredName = [holderAccount?.firstName?.trim(), holderAccount?.lastName?.trim()].filter(Boolean).join(' ') || 'Wallet holder';
   const displayName = profilePreferences.nickname || registeredName;
   const studentId = holderAccount?.studentId?.trim() || 'Pending verification';
   const showNav = walletEnabled && ['wallet', 'camera', 'history', 'settings', 'success'].includes(screen);
 
   useEffect(() => {
-    if (screen !== 'history') return;
+    if (screen !== 'notifications') return;
     setHasUnreadActivity(false);
     if (!currentUser) return;
     const unreadIds = notificationIds.filter((id) => !readNotificationIds.includes(id));
@@ -429,7 +472,7 @@ export default function App() {
   }, [currentUser, notificationKey, readNotificationIds, screen]);
 
   useEffect(() => {
-    if (!walletEnabled || !['wallet', 'success', 'history', 'settings', 'camera', 'credential', 'share'].includes(screen)) return;
+    if (!walletEnabled || !['wallet', 'success', 'history', 'notifications', 'settings', 'camera', 'credential', 'share'].includes(screen)) return;
     const refresh = () => {
       if (AppState.currentState === 'background') return;
       void loadCredentialOffers().catch((error) => {
@@ -476,7 +519,7 @@ export default function App() {
   }, [loadIssuerProviders]);
 
   const retryCredentialOffers = useCallback(() => {
-    void loadCredentialOffers().catch((error) => {
+    return loadCredentialOffers().catch((error) => {
       if (!isSessionError(error)) return;
       setCurrentUser(null);
       setCredentialOffers([]);
@@ -511,6 +554,7 @@ export default function App() {
       setCredentialValidity('active');
       setHistory((events) => [{
         id: issued.credentialId,
+        occurredAt: issued.issuedAt,
         type: 'issue',
         title: `Issued: ${pendingOffer.displayName}`,
         subtitle: `From ${pendingOffer.issuerName}`,
@@ -535,6 +579,10 @@ export default function App() {
 
   const goWithShareProtection = useCallback((nextScreen: Screen) => {
     if (nextScreen === 'share') {
+      if (credentialValidity === 'invalid') {
+        setScreen('revoked_vc');
+        return;
+      }
       if (credentialValidity !== 'active') return;
       setShareOrigin('credential');
       setPinPurpose('share');
@@ -595,6 +643,7 @@ export default function App() {
       const sharedCount = Object.values(shareFields).filter(Boolean).length;
       const newHistoryEvent: HistoryEvent = {
         id: `share-${Date.now()}`,
+        occurredAt: new Date().toISOString(),
         type: 'share',
         title: shareOrigin === 'camera' ? 'Prepared proof from QR scan' : 'Shared proof with Employer A',
         subtitle: `Education Transcript VC · ${sharedCount} field${sharedCount === 1 ? '' : 's'}`,
@@ -602,6 +651,7 @@ export default function App() {
         sharedFields: { ...shareFields },
         fromCamera: shareOrigin === 'camera',
       };
+      await appendSharingHistory(currentUser.authUserId, newHistoryEvent);
       setReceiptFields({ ...shareFields });
       setReceiptFromCamera(shareOrigin === 'camera');
       setHistory((previous) => [newHistoryEvent, ...previous]);
@@ -613,6 +663,12 @@ export default function App() {
       setSharing(false);
     }
   }, [currentUser, requireBiometrics, shareFields, shareOrigin, sharing]);
+
+  const selectActivityEvent = useCallback((event: HistoryEvent) => {
+    if (event.sharedFields) setReceiptFields(event.sharedFields);
+    setReceiptFromCamera(event.fromCamera === true);
+    setScreen(event.targetScreen);
+  }, []);
 
   const content = useMemo(() => {
     if (screen === 'loading') {
@@ -718,7 +774,6 @@ export default function App() {
           <WalletScreen
             go={goWithShareProtection}
             hasCredential={hasCredential}
-            pendingOffer={pendingOffer}
             offersLoading={offersLoading}
             offersError={offersError}
             walletEnabled={walletEnabled}
@@ -733,6 +788,9 @@ export default function App() {
             profilePhotoUri={profilePreferences.photoUri}
             credential={issuedCredentialDisplay}
             credentialValidity={credentialValidity}
+            recentActivity={recentActivity}
+            onSelectActivity={selectActivityEvent}
+            hasUnreadNotifications={hasUnreadNotifications}
           />
         );
       case 'trusted_services':
@@ -763,7 +821,6 @@ export default function App() {
           <WalletScreen
             go={goWithShareProtection}
             hasCredential={hasCredential}
-            pendingOffer={pendingOffer}
             offersLoading={offersLoading}
             offersError={offersError}
             walletEnabled={walletEnabled}
@@ -778,6 +835,9 @@ export default function App() {
             profilePhotoUri={profilePreferences.photoUri}
             credential={issuedCredentialDisplay}
             credentialValidity={credentialValidity}
+            recentActivity={recentActivity}
+            onSelectActivity={selectActivityEvent}
+            hasUnreadNotifications={hasUnreadNotifications}
           />
         );
       case 'credential':
@@ -790,6 +850,10 @@ export default function App() {
             credentialValidity={credentialValidity}
           />
         );
+      case 'revoked_vc':
+        return <RevokedVcScreen go={setScreen} revocationReason={credentialValidity === 'invalid' ? credentialRevocationReason : null} />;
+      case 'contact_support':
+        return <ContactSupportScreen go={setScreen} notificationEmail={holderAccount?.universityEmail || currentUser?.email || ''} />;
       case 'share':
         return (
           <ShareScreen
@@ -814,16 +878,22 @@ export default function App() {
             onDone={receiptFromCamera ? () => setScreen('wallet') : undefined}
           />
         );
+      case 'notifications':
+        return (
+          <HistoryScreen
+            title="Notifications"
+            onBack={() => setScreen('wallet')}
+            go={setScreen}
+            history={recentActivity}
+            onSelectEvent={selectActivityEvent}
+          />
+        );
       case 'history':
         return (
           <HistoryScreen
             go={setScreen}
-            history={recentActivity}
-            onSelectEvent={(event) => {
-              if (event.sharedFields) setReceiptFields(event.sharedFields);
-              setReceiptFromCamera(event.fromCamera === true);
-              setScreen(event.targetScreen);
-            }}
+            history={recentActivity.filter((event) => event.type === 'share' && !event.fromCamera)}
+            onSelectEvent={selectActivityEvent}
           />
         );
       case 'camera':
@@ -855,6 +925,7 @@ export default function App() {
         return (
           <EditProfileScreen
             officialName={registeredName}
+            personalEmail={holderAccount?.personalEmail || currentUser.email}
             initialNickname={profilePreferences.nickname}
             initialPhotoUri={profilePreferences.photoUri}
             onBack={() => setScreen('settings')}
@@ -868,8 +939,9 @@ export default function App() {
       case 'linked_issuer':
         return (
           <LinkedIssuerScreen
-            officialName={registeredName}
-            studentId={studentId}
+            credential={issuedCredentialDisplay}
+            credentialValidity={credentialValidity}
+            walletEnabled={walletEnabled}
             confirmedAt={holderAccount?.confirmedAt ?? null}
             onBack={() => setScreen('settings')}
           />
@@ -877,7 +949,7 @@ export default function App() {
       default:
         return <WelcomeScreen onRegister={() => setScreen('registration')} onLogin={() => setScreen('login')} />;
     }
-  }, [acceptOnboardingRequest, acceptPendingOffer, authEmail, continueAfterMatch, credentialValidity, currentUser, displayName, goWithShareProtection, hasCredential, holderAccount, issuedCredentialDisplay, issuerProviders, loadHolderState, loginNotice, offerAcceptanceError, offersError, offersLoading, onboardingRequest, passwordResetAccessToken, pendingOffer, pinPurpose, profilePreferences, providersError, providersLoading, receiptFromCamera, recentActivity, refreshOnboarding, registeredName, requireBiometrics, resetWallet, retryCredentialOffers, retryIssuerProviders, screen, selectIssuerProvider, setupError, shareError, shareFields, shareOrigin, shareProof, sharing, signOut, studentId, toggleBiometrics, walletEnabled]);
+  }, [acceptOnboardingRequest, acceptPendingOffer, authEmail, continueAfterMatch, credentialRevocationReason, credentialValidity, currentUser, displayName, goWithShareProtection, hasCredential, hasUnreadNotifications, holderAccount, issuedCredentialDisplay, issuerProviders, loadHolderState, loginNotice, offerAcceptanceError, offersError, offersLoading, onboardingRequest, passwordResetAccessToken, pendingOffer, pinPurpose, profilePreferences, providersError, providersLoading, receiptFromCamera, recentActivity, refreshOnboarding, registeredName, requireBiometrics, resetWallet, retryCredentialOffers, retryIssuerProviders, screen, selectActivityEvent, selectIssuerProvider, setupError, shareError, shareFields, shareOrigin, shareProof, sharing, signOut, studentId, toggleBiometrics, walletEnabled]);
 
   return (
     <SafeAreaProvider>
@@ -891,7 +963,6 @@ export default function App() {
           <BottomNav
             active={screen === 'success' ? 'wallet' : (screen as 'wallet' | 'camera' | 'history' | 'settings')}
             go={setScreen}
-            hasUnreadNotifications={hasUnreadNotifications}
           />
         ) : null}
       </SafeAreaView>
