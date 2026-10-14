@@ -53,6 +53,25 @@ export function IdentitySubmissionScreen({
     setErrorMessage(null);
   };
 
+  const changeWebDate = (value: string) => {
+    setErrorMessage(null);
+    if (!value) {
+      setSelectedDateOfBirth(null);
+      return;
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    // Construct a local date so the birthday does not shift with the time zone.
+    const date = new Date(year, month - 1, day);
+    if (!Number.isFinite(date.getTime()) || formatDateOfBirth(date) !== value ||
+        date < minimumDateOfBirth || date > maximumDateOfBirth) {
+      setSelectedDateOfBirth(null);
+      setErrorMessage('Select a valid date of birth between 1900-01-01 and today.');
+      return;
+    }
+    setSelectedDateOfBirth(date);
+    setPendingDateOfBirth(date);
+  };
+
   const changeAndroidDate = (event: DateTimePickerEvent, value?: Date) => {
     setShowDatePicker(false);
     if (event.type === 'set' && value) {
@@ -146,17 +165,41 @@ export function IdentitySubmissionScreen({
             <Text style={styles.label}>Admission number</Text>
             <TextInput style={styles.input} value={admissionNo} onChangeText={setAdmissionNo} placeholder="Enter admission number" placeholderTextColor={colors.muted} autoCapitalize="characters" autoCorrect={false} />
             <Text style={styles.label}>Date of birth</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={dateOfBirth ? `Date of birth ${dateOfBirth}` : 'Select date of birth'}
-              onPress={openDatePicker}
-              style={({ pressed }) => [styles.dateInput, pressed && styles.dateInputPressed]}
-            >
-              <Text style={[styles.dateValue, !dateOfBirth && styles.datePlaceholder]}>
-                {dateOfBirth || 'Select date of birth'}
-              </Text>
-              <Text style={styles.dateAction}>Choose</Text>
-            </Pressable>
+            {Platform.OS === 'web' ? React.createElement('input', {
+              type: 'date',
+              'aria-label': 'Date of birth',
+              'aria-required': true,
+              required: true,
+              value: dateOfBirth,
+              min: formatDateOfBirth(minimumDateOfBirth),
+              max: formatDateOfBirth(maximumDateOfBirth),
+              onChange: (event: React.ChangeEvent<HTMLInputElement>) => changeWebDate(event.currentTarget.value),
+              style: {
+                boxSizing: 'border-box',
+                width: '100%',
+                minWidth: 0,
+                height: 52,
+                padding: '0 16px',
+                border: `1px solid ${colors.border}`,
+                borderRadius: 16,
+                backgroundColor: colors.bg,
+                color: colors.ink,
+                fontFamily: 'inherit',
+                fontSize: 15,
+              },
+            }) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={dateOfBirth ? `Date of birth ${dateOfBirth}` : 'Select date of birth'}
+                onPress={openDatePicker}
+                style={({ pressed }) => [styles.dateInput, pressed && styles.dateInputPressed]}
+              >
+                <Text style={[styles.dateValue, !dateOfBirth && styles.datePlaceholder]}>
+                  {dateOfBirth || 'Select date of birth'}
+                </Text>
+                <Text style={styles.dateAction}>Choose</Text>
+              </Pressable>
+            )}
             {showDatePicker && Platform.OS === 'android' ? (
               <DateTimePicker
                 value={pendingDateOfBirth}
